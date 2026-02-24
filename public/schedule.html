@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>جدول الشهر</title>
+  <link rel="stylesheet" href="./assets/app.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="title">
+      <h1 id="hTitle">جدول الشهر</h1>
+      <div class="sub" id="hSub">—</div>
+    </div>
+    <div class="toolbar">
+      <a class="btn secondary" href="./login.html">دخول الإدارة</a>
+      <span class="badge" id="lastUpdate">—</span>
+    </div>
+  </div>
+
+  <div id="gate" class="notice warn" style="display:none"></div>
+
+  <div class="card" id="monthNav">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <button id="prev" class="btn secondary">← الشهر السابق</button>
+      <div class="badge">الشهر: <span class="kbd" id="monthKey">—</span></div>
+      <button id="next" class="btn secondary">الشهر التالي →</button>
+    </div>
+  </div>
+
+  <div id="empty" class="card" style="margin-top:12px;display:none">
+    <div style="font-weight:700">لا يوجد جدول لهذا الشهر حتى الآن.</div>
+    <div class="small" style="margin-top:6px">يتم تحديث الجدولة من الإدارة بداية كل شهر.</div>
+  </div>
+
+  <div id="list" style="margin-top:12px;display:grid;gap:12px"></div>
+</div>
+
+<script type="module">
+  import {
+    supabase, setTitle, mealLabel, getMonthParam, getAccessParam, monthLabel,
+    formatGregorian, formatHijriUmmAlQura, formatTime12, downloadICS, el, validateAccessToken
+  } from "./assets/app.js";
+  import { APP_TITLE } from "./assets/config.js";
+
+  const gate = document.getElementById("gate");
+  const list = document.getElementById("list");
+  const empty = document.getElementById("empty");
+  const hTitle = document.getElementById("hTitle");
+  const hSub = document.getElementById("hSub");
+  const monthKey = document.getElementById("monthKey");
+  const lastUpdate = document.getElementById("lastUpdate");
+
+  const prevBtn = document.getElementById("prev");
+  const nextBtn = document.getElementById("next");
+
+  function yyyymmToParts(m){ const [y,mo]=m.split("-").map(Number); return {y,mo}; }
+  function shiftMonth(m, delta){
+    const {y,mo}=yyyymmToParts(m);
+    const d = new Date(Date.UTC(y, mo-1+delta, 1, 12, 0, 0));
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}`;
+  }
+
+  function setHeader(month){
+    const ml = monthLabel(month);
+    hTitle.textContent = `${APP_TITLE} — ${ml}`;
+    hSub.textContent = "ميلادي (أساس) + هجري أم القرى (للعرض)";
+    setTitle(ml);
+    monthKey.textContent = month;
+  }
+
+  function setLastUpdate(ts){
+    if (!ts){ lastUpdate.textContent = "—"; return; }
+    const d = new Date(ts);
+    const s = new Intl.DateTimeFormat("ar-SA", { timeZone:"Asia/Riyadh", day:"2-digit", month:"short", year:"numeric" }).format(d);
+    lastUpdate.textContent = `آخر تحديث: ${s}`;
+  }
+
+  function navTo(month){
+    const url = new URL(window.location.href);
+    url.searchParams.set("month", month);
+    history.replaceState({}, "", url.toString());
+    loadMonth(month);
+  }
+
+  async function loadMonth(month){
+    const access = getAccessParam();
+    if (!validateAccessToken(access)){
+      gate.style.display = "block";
+      gate.textContent = "الرابط غير صحيح أو ناقص. افتح الرابط من مجموعة واتساب.";
+      list.innerHTML = "";
+      empty.style.display = "none";
+      return;
+    }
+    gate.style.display = "none";
+    setHeader(month);
+
+    const { data, error } = await supabase.rpc("get_month_schedule", { p_month: month });
+    if (error){
+      empty.style.display = "block";
+      empty.querySelector("div").textContent = "حدث خطأ بالقراءة. راجع إعدادات Supabase.";
+      list.innerHTML = "";
+      return;
+    }
+
+    const rows = data || [];
+    if (!rows.length){
+      empty.style.display = "block";
+      list.innerHTML = "";
+      setLastUpdate(null);
+      return;
+    }
+
+    empty.style.display = "none";
+    list.innerHTML = "";
+    setLastUpdate(rows.reduce((mx, r) => (!mx || r.created_at > mx) ? r.created_at : mx, null));
+
+    rows.forEach(r => {
+      const hostsText = r.hosts || "—";
+      const card = el("div", { class:"card mealCard", "data-meal": r.meal }, [
+        el("div", { class:"mealTop" }, [
+          el("div", {}, [
+            el("div", { class:"mealName" }, [`${mealLabel(r.meal)} — ${r.location || "الاستراحة"}`]),
+            el("div", { class:"mealMeta" }, [
+              el("div", {}, [formatGregorian(r.starts_at)]),
+              el("div", {}, [formatHijriUmmAlQura(r.starts_at)]),
+              el("div", {}, [`${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}`]),
+            ])
+          ]),
+          el("button", { class:"btn secondary", onclick: () => {
+            downloadICS({
+              meal: r.meal,
+              startsAtISO: r.starts_at,
+              endsAtISO: r.ends_at,
+              hostsText,
+              notes: r.notes || ""
+            });
+          }}, ["📅 أضف للتقويم"])
+        ]),
+        el("div", { class:"mealHosts" }, [
+          el("span", { class:"small" }, ["الداعين: "]),
+          el("span", {}, [hostsText])
+        ]),
+        r.notes ? el("div", { class:"small", style:"margin-top:8px" }, [`ملاحظة: ${r.notes}`]) : null
+      ]);
+      list.appendChild(card);
+    });
+  }
+
+  const initialMonth = getMonthParam();
+  setHeader(initialMonth);
+
+  prevBtn.addEventListener("click", () => navTo(shiftMonth(getMonthParam(), -1)));
+  nextBtn.addEventListener("click", () => navTo(shiftMonth(getMonthParam(), +1)));
+
+  loadMonth(initialMonth);
+</script>
+</body>
+</html>
