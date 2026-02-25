@@ -4,17 +4,40 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>دورية الاستراحة — جدول الشهر</title>
+
   <link rel="stylesheet" href="./assets/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
     /* احتياط لو CSS عندك قديم */
     .cardsGrid{display:grid;gap:12px}
-    .mealCardPro{position:relative;overflow:hidden}
-    .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;font-size:12px;color:#475569}
-    .muted{color:#64748b;font-size:13px}
-    .row2{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     .actionsCol{display:flex;flex-direction:column;gap:8px;min-width:180px}
     @media (max-width:720px){.actionsCol{min-width:unset}}
+    .pastCard{opacity:.45;filter:grayscale(.2)}
+    details.pastDetails{
+      border:1px solid var(--line,#e5e7eb);
+      border-radius:16px;
+      background:#fff;
+      padding:10px 12px;
+      margin-top:14px;
+    }
+    details.pastDetails summary{
+      cursor:pointer;
+      list-style:none;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      user-select:none;
+      font-weight:800;
+    }
+    details.pastDetails summary::-webkit-details-marker{display:none}
+    .summaryHint{color:var(--muted,#64748b);font-weight:600;font-size:12px}
+    .pill{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:6px 10px;border-radius:999px;border:1px solid var(--line,#e5e7eb);
+      background:#fff;font-size:12px;color:var(--muted,#64748b)
+    }
   </style>
 </head>
 
@@ -36,15 +59,14 @@
 
   <!-- أدوات -->
   <div class="stickyBar">
-    <div class="row2">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <span class="badge" id="monthBadge">—</span>
       <span class="badge">📍 <b style="color:#111827" id="loc">الاستراحة</b></span>
     </div>
 
-    <div class="row2">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <input id="monthPick" class="input" type="month" style="width:160px"/>
       <button id="reload" class="btn secondary">تحديث</button>
-      <button id="togglePast" class="btn secondary">إخفاء المنتهية</button>
     </div>
 
     <div class="chips" id="chips">
@@ -54,7 +76,6 @@
       <button class="chip" data-filter="asha">عشا</button>
       <button class="chip" data-filter="suhoor">سحور</button>
       <button class="chip" data-filter="upcoming">القادمة</button>
-      <button class="chip" data-filter="past">المنتهية</button>
     </div>
   </div>
 
@@ -62,9 +83,13 @@
 
   <div class="card" style="margin-top:12px">
     <div style="font-weight:800">بطاقات الشهر</div>
-    <div class="small">اليوم مميز — المنتهية شبه مخفية ويمكن إخفاؤها بالكامل.</div>
+    <div class="small">اليوم مميز — المنتهية داخل قسم مطوي بالأسفل.</div>
     <div class="hr"></div>
+
     <div id="list">—</div>
+
+    <!-- Past accordion will be injected here -->
+    <div id="pastWrap"></div>
   </div>
 
 </div>
@@ -82,7 +107,6 @@
 
   let activeFilter = "all";
   let cachedRows = [];
-  let showPast = true;
   let nextMeal = null;
   let countdownTimer = null;
 
@@ -111,8 +135,7 @@
     const weekday = new Intl.DateTimeFormat("ar-SA", { weekday:"long", timeZone: TZ }).format(d);
     const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(d);
     const arr = ymd.split("-");
-    const y = arr[0], m = arr[1], da = arr[2];
-    return weekday + " " + da + "/" + m + "/" + y;
+    return weekday + " " + arr[2] + "/" + arr[1] + "/" + arr[0];
   }
 
   function formatHijriWithPrefix(iso){
@@ -154,21 +177,14 @@
 
   function setFilter(f){
     activeFilter = f;
-    const chips = document.querySelectorAll(".chip");
-    chips.forEach(btn => btn.classList.toggle("active", btn.dataset.filter === f));
-    renderCards();
+    document.querySelectorAll(".chip").forEach(btn => btn.classList.toggle("active", btn.dataset.filter === f));
+    renderAll();
   }
 
   $("chips").addEventListener("click", (e) => {
     const btn = e.target.closest(".chip");
     if (!btn) return;
     setFilter(btn.dataset.filter);
-  });
-
-  $("togglePast").addEventListener("click", () => {
-    showPast = !showPast;
-    $("togglePast").textContent = showPast ? "إخفاء المنتهية" : "إظهار المنتهية";
-    renderCards();
   });
 
   $("reload").addEventListener("click", () => loadMonth($("monthPick").value));
@@ -194,17 +210,22 @@
 
     box.style.display = "block";
     box.innerHTML = "";
+
     const line1 = document.createElement("div");
     line1.innerHTML = "⏭️ <b>أقرب مناسبة:</b> " + mealLabel(r.meal);
+
     const line2 = document.createElement("div");
     line2.className = "small";
     line2.textContent = "📅 " + g;
+
     const line3 = document.createElement("div");
     line3.className = "small";
     line3.textContent = "🕌 " + h;
+
     const line4 = document.createElement("div");
     line4.className = "small";
     line4.textContent = "⏰ " + t;
+
     const line5 = document.createElement("div");
     line5.style.marginTop = "6px";
     const cd = document.createElement("b");
@@ -222,7 +243,6 @@
   function runCountdown(){
     if (countdownTimer) clearInterval(countdownTimer);
     countdownTimer = null;
-
     if (!nextMeal) return;
 
     const tick = () => {
@@ -244,7 +264,8 @@
     };
     const esc = (s) => String(s||"").replace(/\\/g,"\\\\").replace(/\n/g,"\\n").replace(/,/g,"\\,").replace(/;/g,"\\;");
     const uid = (crypto.randomUUID ? crypto.randomUUID() : (Date.now()+"")) + "@dawriya-rest";
-    const lines = [
+
+    return [
       "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Dawriya Rest//AR//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH",
       "BEGIN:VEVENT",
       "UID:" + uid,
@@ -256,8 +277,7 @@
       "LOCATION:" + esc(location),
       "END:VEVENT",
       "END:VCALENDAR"
-    ];
-    return lines.join("\r\n");
+    ].join("\r\n");
   }
 
   function downloadIcs(text, filename){
@@ -272,60 +292,31 @@
   }
 
   function openWhatsAppShare(text){
-    const url = "https://wa.me/?text=" + encodeURIComponent(text);
-    window.open(url, "_blank");
+    window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
   }
 
-  function renderCards(){
+  function buildCard(r, { variant }){
+    // variant: "normal" | "past"
     const now = new Date();
-    let rows = cachedRows.slice();
+    const isPast = new Date(r.starts_at) < now;
+    const isToday = isTodayTZ(r.starts_at);
+    const isNext = nextMeal && r.id === nextMeal.id;
 
-    if (activeFilter === "upcoming") rows = rows.filter(r => new Date(r.starts_at) >= now);
-    else if (activeFilter === "past") rows = rows.filter(r => new Date(r.starts_at) < now);
-    else if (activeFilter !== "all") rows = rows.filter(r => r.meal === activeFilter);
+    const hosts = (r._hostNames && r._hostNames.length) ? r._hostNames.join(" – ") : "—";
+    const g = formatGregorianDayAndDate(r.starts_at);
+    const h = formatHijriWithPrefix(r.starts_at);
+    const t = formatTime12(r.starts_at) + " – " + formatTime12(r.ends_at);
 
-    if (!rows.length){
-      $("list").innerHTML = '<div class="notice">لا توجد مناسبات ضمن هذا الفلتر.</div>';
-      return;
+    const card = document.createElement("div");
+    card.className = "card mealCardPro mealCard";
+    card.dataset.meal = r.meal;
+
+    if (variant === "past" || isPast){
+      card.classList.add("pastCard");
     }
 
-    // ترتيب: اليوم أولًا، ثم القادمة، ثم المنتهية
-    rows.sort((a,b)=>{
-      const aToday = isTodayTZ(a.starts_at) ? 0 : 1;
-      const bToday = isTodayTZ(b.starts_at) ? 0 : 1;
-      if (aToday !== bToday) return aToday - bToday;
-      const aPast = new Date(a.starts_at) < now ? 1 : 0;
-      const bPast = new Date(b.starts_at) < now ? 1 : 0;
-      if (aPast !== bPast) return aPast - bPast;
-      return new Date(a.starts_at) - new Date(b.starts_at);
-    });
-
-    const wrap = document.createElement("div");
-    wrap.className = "cardsGrid";
-
-    rows.forEach(r=>{
-      const isPast = new Date(r.starts_at) < now;
-      const isToday = isTodayTZ(r.starts_at);
-      const isNext = nextMeal && r.id === nextMeal.id;
-
-      if (isPast && !showPast && activeFilter !== "past") return;
-
-      const hosts = (r._hostNames && r._hostNames.length) ? r._hostNames.join(" – ") : "—";
-      const g = formatGregorianDayAndDate(r.starts_at);
-      const h = formatHijriWithPrefix(r.starts_at);
-      const t = formatTime12(r.starts_at) + " – " + formatTime12(r.ends_at);
-
-      const card = document.createElement("div");
-      card.className = "card mealCardPro mealCard";
-      card.dataset.meal = r.meal;
-
-      // الماضية شبه مخفية
-      if (isPast){
-        card.style.opacity = "0.45";
-        card.style.filter = "grayscale(.2)";
-      }
-
-      // اليوم / الأقرب إبراز
+    // إبراز اليوم / الأقرب في قسم غير المنتهي
+    if (variant !== "past"){
       if (isToday){
         card.style.border = "1px solid rgba(245,158,11,.55)";
         card.style.background = "rgba(245,158,11,.06)";
@@ -333,34 +324,37 @@
         card.style.border = "1px solid rgba(34,197,94,.55)";
         card.style.background = "rgba(34,197,94,.06)";
       }
+    }
 
-      const top = document.createElement("div");
-      top.className = "mealTopPro";
+    const top = document.createElement("div");
+    top.className = "mealTopPro";
 
-      const left = document.createElement("div");
+    const left = document.createElement("div");
 
-      const badge = document.createElement("div");
-      badge.className = "mealBadge";
-      badge.textContent = "🍽️ " + mealLabel(r.meal);
+    const badge = document.createElement("div");
+    badge.className = "mealBadge";
+    badge.textContent = "🍽️ " + mealLabel(r.meal);
 
-      const meta = document.createElement("div");
-      meta.className = "mealMeta";
-      meta.style.marginTop = "8px";
+    const meta = document.createElement("div");
+    meta.className = "mealMeta";
+    meta.style.marginTop = "8px";
 
-      const lineA = document.createElement("div");
-      lineA.innerHTML = "<b style='color:#0f172a'>📅 " + g + "</b>";
-      const lineB = document.createElement("div");
-      lineB.textContent = "🕌 " + h;
-      const lineC = document.createElement("div");
-      lineC.textContent = "⏰ " + t;
+    const lineA = document.createElement("div");
+    lineA.innerHTML = "<b style='color:#0f172a'>📅 " + g + "</b>";
+    const lineB = document.createElement("div");
+    lineB.textContent = "🕌 " + h;
+    const lineC = document.createElement("div");
+    lineC.textContent = "⏰ " + t;
 
-      meta.appendChild(lineA);
-      meta.appendChild(lineB);
-      meta.appendChild(lineC);
+    meta.appendChild(lineA);
+    meta.appendChild(lineB);
+    meta.appendChild(lineC);
 
-      left.appendChild(badge);
-      left.appendChild(meta);
+    left.appendChild(badge);
+    left.appendChild(meta);
 
+    // تاج اليوم/الأقرب (فقط في القسم الرئيسي)
+    if (variant !== "past"){
       const tagText = isToday ? "📍 اليوم" : (isNext ? "⏭️ الأقرب" : "");
       if (tagText){
         const pill = document.createElement("span");
@@ -369,82 +363,156 @@
         pill.textContent = tagText;
         left.appendChild(pill);
       }
+    }
 
-      const actions = document.createElement("div");
-      actions.className = "actionsCol";
+    const actions = document.createElement("div");
+    actions.className = "actionsCol";
 
-      const btnIcs = document.createElement("button");
-      btnIcs.className = "btn secondary primaryAction";
-      btnIcs.textContent = "📅 أضف للتقويم";
-      btnIcs.addEventListener("click", ()=>{
-        const title = APP_TITLE + " — " + mealLabel(r.meal);
-        const descParts = [
-          mealLabel(r.meal),
-          "📅 " + g,
-          "🕌 " + h,
-          "⏰ " + t,
-          "📍 " + DEFAULT_LOCATION,
-          "👥 الداعين: " + hosts
-        ];
-        if (r.notes) descParts.push("📝 " + r.notes);
-        const desc = descParts.join("\\n");
-        const ics = makeIcs(title, desc, DEFAULT_LOCATION, new Date(r.starts_at), new Date(r.ends_at));
-        const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(new Date(r.starts_at));
-        downloadIcs(ics, APP_TITLE + "-" + mealLabel(r.meal) + "-" + ymd + ".ics");
-      });
+    const btnIcs = document.createElement("button");
+    btnIcs.className = "btn secondary primaryAction";
+    btnIcs.textContent = "📅 أضف للتقويم";
+    btnIcs.addEventListener("click", ()=>{
+      const title = APP_TITLE + " — " + mealLabel(r.meal);
+      const descParts = [
+        "🍽️ " + mealLabel(r.meal),
+        "📅 " + g,
+        "🕌 " + h,
+        "⏰ " + t,
+        "📍 " + DEFAULT_LOCATION,
+        "👥 الداعين: " + hosts
+      ];
+      if (r.notes) descParts.push("📝 " + r.notes);
+      const desc = descParts.join("\\n");
 
-      const btnWa = document.createElement("button");
-      btnWa.className = "btn";
-      btnWa.style.background = "#25D366";
-      btnWa.textContent = "📤 مشاركة واتساب";
-      btnWa.addEventListener("click", ()=>{
-        const msg = [
-          "🍽️ " + mealLabel(r.meal),
-          "📅 " + g,
-          "🕌 " + h,
-          "⏰ " + t,
-          "📍 " + DEFAULT_LOCATION,
-          "👥 الداعين: " + hosts
-        ];
-        if (r.notes) msg.push("📝 " + r.notes);
-        msg.push("");
-        msg.push(location.href);
-        openWhatsAppShare(msg.join("\n"));
-      });
-
-      actions.appendChild(btnIcs);
-      actions.appendChild(btnWa);
-
-      top.appendChild(left);
-      top.appendChild(actions);
-
-      const hostsBlock = document.createElement("div");
-      hostsBlock.className = "hostsBlock";
-      const ht = document.createElement("div");
-      ht.className = "hostsTitle";
-      ht.textContent = "الداعين";
-      const hn = document.createElement("div");
-      hn.className = "hostsNames";
-      hn.textContent = hosts;
-      hostsBlock.appendChild(ht);
-      hostsBlock.appendChild(hn);
-
-      if (r.notes){
-        const note = document.createElement("div");
-        note.className = "small";
-        note.style.marginTop = "8px";
-        note.textContent = "ملاحظة: " + r.notes;
-        hostsBlock.appendChild(note);
-      }
-
-      card.appendChild(top);
-      card.appendChild(hostsBlock);
-
-      wrap.appendChild(card);
+      const ics = makeIcs(title, desc, DEFAULT_LOCATION, new Date(r.starts_at), new Date(r.ends_at));
+      const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(new Date(r.starts_at));
+      downloadIcs(ics, APP_TITLE + "-" + mealLabel(r.meal) + "-" + ymd + ".ics");
     });
+
+    const btnWa = document.createElement("button");
+    btnWa.className = "btn";
+    btnWa.style.background = "#25D366";
+    btnWa.textContent = "📤 مشاركة واتساب";
+    btnWa.addEventListener("click", ()=>{
+      const msg = [
+        "🍽️ " + mealLabel(r.meal),
+        "📅 " + g,
+        "🕌 " + h,
+        "⏰ " + t,
+        "📍 " + DEFAULT_LOCATION,
+        "👥 الداعين: " + hosts
+      ];
+      if (r.notes) msg.push("📝 " + r.notes);
+      msg.push("");
+      msg.push(location.href);
+      openWhatsAppShare(msg.join("\n"));
+    });
+
+    actions.appendChild(btnIcs);
+    actions.appendChild(btnWa);
+
+    top.appendChild(left);
+    top.appendChild(actions);
+
+    const hostsBlock = document.createElement("div");
+    hostsBlock.className = "hostsBlock";
+
+    const ht = document.createElement("div");
+    ht.className = "hostsTitle";
+    ht.textContent = "الداعين";
+
+    const hn = document.createElement("div");
+    hn.className = "hostsNames";
+    hn.textContent = hosts;
+
+    hostsBlock.appendChild(ht);
+    hostsBlock.appendChild(hn);
+
+    if (r.notes){
+      const note = document.createElement("div");
+      note.className = "small";
+      note.style.marginTop = "8px";
+      note.textContent = "ملاحظة: " + r.notes;
+      hostsBlock.appendChild(note);
+    }
+
+    card.appendChild(top);
+    card.appendChild(hostsBlock);
+    return card;
+  }
+
+  function renderAll(){
+    const now = new Date();
+
+    // فلتر أساسي (للقسم الرئيسي فقط)
+    let base = cachedRows.slice();
+
+    if (activeFilter === "upcoming") base = base.filter(r => new Date(r.starts_at) >= now);
+    else if (activeFilter !== "all") base = base.filter(r => r.meal === activeFilter);
+
+    // نفصل الماضي عن غيره
+    const currentRows = base.filter(r => new Date(r.starts_at) >= now);
+    const pastRowsAll = cachedRows.filter(r => new Date(r.starts_at) < now);
+
+    // ترتيب القسم الحالي: اليوم أولًا ثم الأقرب ثم البقية
+    currentRows.sort((a,b)=>{
+      const aToday = isTodayTZ(a.starts_at) ? 0 : 1;
+      const bToday = isTodayTZ(b.starts_at) ? 0 : 1;
+      if (aToday !== bToday) return aToday - bToday;
+      return new Date(a.starts_at) - new Date(b.starts_at);
+    });
+
+    // ترتيب الماضي: الأحدث أولاً
+    pastRowsAll.sort((a,b)=> new Date(b.starts_at) - new Date(a.starts_at));
+
+    // القسم الرئيسي
+    const wrap = document.createElement("div");
+    wrap.className = "cardsGrid";
+
+    if (!currentRows.length){
+      wrap.innerHTML = '<div class="notice">لا توجد مناسبات قادمة ضمن هذا الفلتر.</div>';
+    } else {
+      currentRows.forEach(r => wrap.appendChild(buildCard(r, { variant: "normal" })));
+    }
 
     $("list").innerHTML = "";
     $("list").appendChild(wrap);
+
+    // قسم المنتهية (مطوي)
+    const pastWrap = $("pastWrap");
+    pastWrap.innerHTML = "";
+
+    if (pastRowsAll.length){
+      const details = document.createElement("details");
+      details.className = "pastDetails";
+      details.open = false; // مطوي افتراضيًا
+
+      const summary = document.createElement("summary");
+
+      const left = document.createElement("div");
+      left.textContent = "المنتهية (" + pastRowsAll.length + ")";
+
+      const right = document.createElement("div");
+      right.className = "summaryHint";
+      right.textContent = "اضغط للعرض";
+
+      summary.appendChild(left);
+      summary.appendChild(right);
+
+      const inner = document.createElement("div");
+      inner.style.marginTop = "12px";
+
+      const grid = document.createElement("div");
+      grid.className = "cardsGrid";
+
+      pastRowsAll.forEach(r => grid.appendChild(buildCard(r, { variant: "past" })));
+
+      inner.appendChild(grid);
+      details.appendChild(summary);
+      details.appendChild(inner);
+
+      pastWrap.appendChild(details);
+    }
   }
 
   async function loadMonth(m){
@@ -453,12 +521,12 @@
 
     setMessage("", "جارٍ تحميل الجدول…");
     $("list").textContent = "—";
+    $("pastWrap").innerHTML = "";
 
-    // حدود الشهر
     const start = m + "-01T00:00:00+03:00";
     const parts = m.split("-");
     const yy = Number(parts[0]), mm = Number(parts[1]);
-    const endDate = new Date(Date.UTC(yy, mm, 1, 0,0,0)); // أول يوم من الشهر التالي
+    const endDate = new Date(Date.UTC(yy, mm, 1, 0,0,0));
     const end = endDate.getUTCFullYear() + "-" + pad2(endDate.getUTCMonth()+1) + "-" + pad2(endDate.getUTCDate()) + "T00:00:00+03:00";
 
     const resMeals = await supabase
@@ -471,8 +539,9 @@
     if (resMeals.error){
       setMessage("warn", "تعذر تحميل البيانات: " + resMeals.error.message);
       $("nextBox").style.display = "none";
+      cachedRows = [];
       nextMeal = null;
-      runCountdown();
+      if (countdownTimer) clearInterval(countdownTimer);
       return;
     }
 
@@ -483,7 +552,7 @@
       $("nextBox").style.display = "none";
       cachedRows = [];
       nextMeal = null;
-      runCountdown();
+      if (countdownTimer) clearInterval(countdownTimer);
       return;
     }
 
@@ -519,12 +588,13 @@
     });
 
     cachedRows = rows;
-
     setMessage("ok", "تم تحميل الجدول.");
+
     nextMeal = pickNextUpcoming(rows);
     showNextBanner(nextMeal);
     runCountdown();
-    renderCards();
+
+    renderAll();
   }
 
   // init
