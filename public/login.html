@@ -12,7 +12,7 @@
     <div class="header">
       <div class="title">
         <h1>تسجيل دخول الإدارة</h1>
-        <div class="sub">Magic Link — أدخل بريدك وسيصلك رابط الدخول</div>
+        <div class="sub">بريد + كلمة مرور</div>
       </div>
     </div>
 
@@ -20,16 +20,16 @@
       <label for="email">البريد الإلكتروني</label>
       <input id="email" class="input" type="email" placeholder="name@example.com" autocomplete="email"/>
 
+      <label for="password">كلمة المرور</label>
+      <input id="password" class="input" type="password" placeholder="••••••••" autocomplete="current-password"/>
+
       <div style="display:flex;gap:10px;align-items:center;justify-content:flex-start;margin-top:12px;flex-wrap:wrap">
-        <button id="send" class="btn">إرسال رابط الدخول</button>
+        <button id="login" class="btn">تسجيل دخول</button>
         <a class="btn secondary" href="./schedule.html">صفحة العرض</a>
       </div>
 
       <div class="hr"></div>
-      <div id="msg" class="notice">ملاحظة: إذا لم تجد الرسالة، راجع “Spam / Junk”.</div>
-      <div class="small" style="margin-top:10px">
-        يجب إضافة رابط <span class="kbd">/admin.html</span> ضمن Redirect URLs في Supabase.
-      </div>
+      <div id="msg" class="notice">استخدم بيانات الأدمن التي أنشأتها في Supabase.</div>
     </div>
   </div>
 
@@ -38,36 +38,40 @@
   setTitle("تسجيل دخول الإدارة");
 
   const emailEl = document.getElementById("email");
+  const passEl = document.getElementById("password");
   const msg = document.getElementById("msg");
-  const btn = document.getElementById("send");
+  const btn = document.getElementById("login");
 
-  btn.addEventListener("click", async () => {
+  async function doLogin(){
     const email = (emailEl.value || "").trim();
-    if (!email) {
+    const password = passEl.value || "";
+
+    if (!email || !password){
       msg.className = "notice warn";
-      msg.textContent = "اكتب البريد الإلكتروني.";
+      msg.textContent = "اكتب البريد وكلمة المرور.";
       return;
     }
-    btn.disabled = true;
-    btn.textContent = "جارٍ الإرسال…";
-    msg.className = "notice";
-    msg.textContent = "جارٍ إرسال الرابط…";
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin + window.location.pathname.replace("login.html","admin.html") }
-    });
+    btn.disabled = true;
+    btn.textContent = "جارٍ الدخول…";
+    msg.className = "notice";
+    msg.textContent = "جارٍ التحقق…";
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error){
       msg.className = "notice warn";
       msg.textContent = error.message;
-    } else {
-      msg.className = "notice ok";
-      msg.textContent = "تم إرسال رابط الدخول إلى بريدك.";
+      btn.disabled = false;
+      btn.textContent = "تسجيل دخول";
+      return;
     }
-    btn.disabled = false;
-    btn.textContent = "إرسال رابط الدخول";
-  });
+
+    window.location.href = "./admin.html";
+  }
+
+  btn.addEventListener("click", doLogin);
+  passEl.addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
 </script>
 </body>
 </html>
