@@ -12,27 +12,40 @@
   <div class="header">
     <div class="title">
       <h1 id="pageTitle">دورية الاستراحة</h1>
-      <div class="sub">الجدول الشهري + إضافة للتقويم</div>
+      <div class="sub" id="pageSub">جدول الشهر — اضغط “أضف للتقويم” لإضافة المناسبة في تقويمك</div>
     </div>
     <div class="toolbar">
-      <span class="badge" id="monthBadge">—</span>
       <a class="btn secondary" href="./login.html">دخول الإدارة</a>
+    </div>
+  </div>
+
+  <div id="nextBox" class="nextBanner" style="display:none"></div>
+
+  <div class="stickyBar">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span class="badge" id="monthBadge">—</span>
+      <span class="badge">📍 <b style="color:#111827" id="loc">الاستراحة</b></span>
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input id="monthPick" class="input" type="month" style="width:160px"/>
+      <button id="reload" class="btn secondary">تحديث</button>
+    </div>
+
+    <div class="chips" id="chips">
+      <button class="chip active" data-filter="all">الكل</button>
+      <button class="chip" data-filter="futoor">فطور</button>
+      <button class="chip" data-filter="ghada">غدا</button>
+      <button class="chip" data-filter="asha">عشا</button>
+      <button class="chip" data-filter="suhoor">سحور</button>
     </div>
   </div>
 
   <div id="msg" class="notice">جارٍ تحميل الجدول…</div>
 
   <div class="card" style="margin-top:12px">
-    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
-      <div>
-        <div style="font-weight:700">جدول الشهر</div>
-        <div class="small">اضغط “أضف للتقويم” لإضافة المناسبة.</div>
-      </div>
-      <div class="toolbar">
-        <input id="monthPick" class="input" type="month"/>
-        <button id="reload" class="btn secondary">تحديث</button>
-      </div>
-    </div>
+    <div style="font-weight:800">بطاقات الشهر</div>
+    <div class="small">تظهر تلقائيًا حسب الشهر المختار.</div>
     <div class="hr"></div>
     <div id="list">—</div>
   </div>
@@ -119,18 +132,138 @@
 
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  // UI init
+  document.title = `${APP_TITLE} — جدول الشهر`;
   $("pageTitle").textContent = APP_TITLE;
-  const month = getMonthParam();
-  $("monthPick").value = month;
-  $("monthBadge").textContent = monthLabel(month);
+  $("loc").textContent = DEFAULT_LOCATION;
+
+  let activeFilter = "all";
+  let cachedRows = [];
+
+  function setMessage(kind, text){
+    $("msg").className = kind ? `notice ${kind}` : "notice";
+    $("msg").textContent = text;
+  }
+
+  function setFilter(f){
+    activeFilter = f;
+    document.querySelectorAll(".chip").forEach(c => c.classList.toggle("active", c.dataset.filter === f));
+    renderCards();
+  }
+
+  document.getElementById("chips").addEventListener("click", (e) => {
+    const btn = e.target.closest(".chip");
+    if (!btn) return;
+    setFilter(btn.dataset.filter);
+  });
 
   $("reload").addEventListener("click", ()=>loadMonth($("monthPick").value));
   $("monthPick").addEventListener("change", ()=>loadMonth($("monthPick").value));
 
+  function pickNextUpcoming(rows){
+    const now = new Date();
+    const upcoming = rows
+      .filter(r => new Date(r.starts_at) >= now)
+      .sort((a,b)=> new Date(a.starts_at) - new Date(b.starts_at));
+    return upcoming[0] || null;
+  }
+
+  function showNextBanner(r){
+    const box = $("nextBox");
+    if (!r){ box.style.display="none"; return; }
+
+    box.style.display="block";
+    box.innerHTML = `
+      ⏭️ <b>أقرب مناسبة:</b> ${mealLabel(r.meal)} — ${formatGregorian(r.starts_at)}
+      <div style="margin-top:6px" class="small">
+        ⏰ ${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}
+      </div>
+    `;
+  }
+
+  function renderCards(){
+    let rows = cachedRows.slice();
+    if (activeFilter !== "all") rows = rows.filter(r => r.meal === activeFilter);
+
+    if (!rows.length){
+      $("list").innerHTML = `<div class="notice">لا توجد مناسبات ضمن هذا الفلتر.</div>`;
+      return;
+    }
+
+    const wrap = document.createElement("div");
+    wrap.className = "cardsGrid";
+
+    for (const r of rows){
+      const hostNames = (r._hostNames || []);
+      const hostsText = hostNames.length ? hostNames.join(" – ") : "—";
+
+      const title = `${APP_TITLE} — ${mealLabel(r.meal)}`;
+      const desc =
+`${mealLabel(r.meal)}
+الداعين: ${hostsText}
+${r.notes ? ("ملاحظة: " + r.notes) : ""}`.trim();
+
+      const startD = new Date(r.starts_at);
+      const endD = new Date(r.ends_at);
+
+      const card = document.createElement("div");
+      card.className = "card mealCard mealCardPro";
+      card.dataset.meal = r.meal;
+
+      const top = document.createElement("div");
+      top.className = "mealTopPro";
+
+      const left = document.createElement("div");
+      left.innerHTML = `
+        <div class="mealBadge">🍽️ ${mealLabel(r.meal)}</div>
+        <div style="height:8px"></div>
+        <div class="mealMeta">
+          <div><b style="color:#0f172a">${formatGregorian(r.starts_at)}</b></div>
+          <div>${formatHijriUmmAlQura(r.starts_at)}</div>
+          <div>⏰ ${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}</div>
+        </div>
+      `;
+
+      const btn = document.createElement("button");
+      btn.className = "btn secondary primaryAction";
+      btn.textContent = "📅 أضف للتقويم";
+      btn.addEventListener("click", () => {
+        const ics = makeIcs({
+          title,
+          description: desc,
+          location: DEFAULT_LOCATION,
+          start: startD,
+          end: endD
+        });
+        const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(new Date(r.starts_at));
+        downloadIcs(ics, `${APP_TITLE}-${mealLabel(r.meal)}-${ymd}.ics`);
+      });
+
+      top.appendChild(left);
+      top.appendChild(btn);
+
+      const hosts = document.createElement("div");
+      hosts.className = "hostsBlock";
+      hosts.innerHTML = `
+        <div class="hostsTitle">الداعين</div>
+        <div class="hostsNames">${hostsText}</div>
+        ${r.notes ? `<div class="small" style="margin-top:8px">ملاحظة: ${r.notes}</div>` : ``}
+      `;
+
+      card.appendChild(top);
+      card.appendChild(hosts);
+
+      wrap.appendChild(card);
+    }
+
+    $("list").innerHTML="";
+    $("list").appendChild(wrap);
+  }
+
   async function loadMonth(m){
     $("monthBadge").textContent = monthLabel(m);
-    $("msg").className = "notice";
-    $("msg").textContent = "جارٍ تحميل الجدول…";
+    $("monthPick").value = m;
+    setMessage("", "جارٍ تحميل الجدول…");
     $("list").textContent = "—";
 
     const start = `${m}-01T00:00:00+03:00`;
@@ -147,21 +280,22 @@
       .order("starts_at", { ascending:true });
 
     if (e1){
-      $("msg").className="notice warn";
-      $("msg").textContent = `تعذر تحميل meals: ${e1.message}`;
+      setMessage("warn", `تعذر تحميل البيانات: ${e1.message}`);
       $("list").textContent="—";
+      showNextBanner(null);
       return;
     }
 
     const rows = meals || [];
     if (!rows.length){
-      $("msg").className="notice";
-      $("msg").textContent = "لا توجد بيانات لهذا الشهر حتى الآن.";
+      setMessage("", "لا توجد بيانات لهذا الشهر حتى الآن.");
       $("list").innerHTML = `<div class="notice">لا توجد مناسبات.</div>`;
+      showNextBanner(null);
+      cachedRows = [];
       return;
     }
 
-    // 2) meal_hosts for those meals
+    // 2) load hosts names (robust)
     const mealIds = rows.map(r=>r.id);
     const { data: links, error: e2 } = await supabase
       .from("meal_hosts")
@@ -169,14 +303,16 @@
       .in("meal_id", mealIds);
 
     if (e2){
-      $("msg").className="notice warn";
-      $("msg").textContent = `تعذر تحميل الداعين: ${e2.message}`;
-      $("list").textContent="—";
+      setMessage("warn", `تعذر تحميل الداعين: ${e2.message}`);
+      showNextBanner(pickNextUpcoming(rows));
+      cachedRows = rows;
+      cachedRows.forEach(r=>r._hostNames=[]);
+      renderCards();
       return;
     }
 
     const memberIds = [...new Set((links||[]).map(x=>x.member_id))];
-    let membersMap = new Map();
+    const membersMap = new Map();
 
     if (memberIds.length){
       const { data: mems, error: e3 } = await supabase
@@ -195,84 +331,18 @@
       hostsByMeal.get(l.meal_id).push(membersMap.get(l.member_id) || "—");
     });
 
-    $("msg").className="notice ok";
-    $("msg").textContent = "تم تحميل الجدول.";
+    rows.forEach(r => {
+      r._hostNames = (hostsByMeal.get(r.id) || []).filter(Boolean);
+    });
 
-    const wrap = document.createElement("div");
-    wrap.style.display="grid";
-    wrap.style.gap="12px";
-
-    for (const r of rows){
-      const hostNames = (hostsByMeal.get(r.id) || []).filter(Boolean);
-      const hostsText = hostNames.length ? hostNames.join(" – ") : "—";
-
-      const title = `${APP_TITLE} — ${mealLabel(r.meal)}`;
-      const desc =
-`${mealLabel(r.meal)}
-الداعين: ${hostsText}
-${r.notes ? ("ملاحظة: " + r.notes) : ""}`.trim();
-
-      const startD = new Date(r.starts_at);
-      const endD = new Date(r.ends_at);
-
-      const card = document.createElement("div");
-      card.className = "card mealCard";
-      card.dataset.meal = r.meal;
-
-      const top = document.createElement("div");
-      top.className = "mealTop";
-
-      const left = document.createElement("div");
-      left.innerHTML = `
-        <div class="mealName">${mealLabel(r.meal)}</div>
-        <div class="mealMeta">
-          <div>${formatGregorian(r.starts_at)}</div>
-          <div>${formatHijriUmmAlQura(r.starts_at)}</div>
-          <div>${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}</div>
-        </div>
-      `;
-
-      const btn = document.createElement("button");
-      btn.className = "btn secondary";
-      btn.textContent = "📅 أضف للتقويم";
-      btn.addEventListener("click", () => {
-        const ics = makeIcs({
-          title,
-          description: desc,
-          location: DEFAULT_LOCATION,
-          start: startD,
-          end: endD
-        });
-        const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(new Date(r.starts_at));
-        downloadIcs(ics, `${APP_TITLE}-${mealLabel(r.meal)}-${ymd}.ics`);
-      });
-
-      top.appendChild(left);
-      top.appendChild(btn);
-
-      const hosts = document.createElement("div");
-      hosts.className = "mealHosts";
-      hosts.innerHTML = `<span class="small">الداعين: </span><span>${hostsText}</span>`;
-
-      card.appendChild(top);
-      card.appendChild(hosts);
-
-      if (r.notes){
-        const note = document.createElement("div");
-        note.className = "small";
-        note.style.marginTop="8px";
-        note.textContent = `ملاحظة: ${r.notes}`;
-        card.appendChild(note);
-      }
-
-      wrap.appendChild(card);
-    }
-
-    $("list").innerHTML="";
-    $("list").appendChild(wrap);
+    cachedRows = rows;
+    setMessage("ok", "تم تحميل الجدول.");
+    showNextBanner(pickNextUpcoming(rows));
+    renderCards();
   }
 
-  loadMonth(month);
+  const initialMonth = getMonthParam();
+  loadMonth(initialMonth);
 </script>
 </body>
 </html>
