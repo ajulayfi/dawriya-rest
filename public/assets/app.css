@@ -87,3 +87,53 @@ label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
 .small{font-size:12px;color:var(--muted)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media (max-width:720px){.grid2{grid-template-columns:1fr}}
+/* ===== Admin Tabs (Mobile-first) ===== */
+.tabsBar{
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(246,247,251,.92);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 8px;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tabBtn{
+  flex: 1 1 auto;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.tabBtn.active{
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
+}
+
+.adminSection{ display:block; }
+.adminSection.hidden{ display:none; }
+
+/* Mobile: hide sections + show only active */
+@media (max-width: 720px){
+  .adminDesktopRow{ display:block !important; }
+  .adminDesktopCol{ width: 100% !important; }
+  .adminSection{ margin-bottom: 12px; }
+}
+
+/* Desktop: show everything (tabs still visible لكن ما نخفي شيء) */
+@media (min-width: 721px){
+  .tabsBar{ position: static; backdrop-filter: none; background: transparent; padding: 0; border: 0; }
+  .tabBtn{ flex: 0 0 auto; }
+  .adminSection.hidden{ display:block; } /* لا نخفي على الكمبيوتر */
+}
