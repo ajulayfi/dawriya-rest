@@ -6,13 +6,32 @@
   <title>لوحة الإدارة</title>
   <link rel="stylesheet" href="./assets/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* تحسينات جوال خفيفة بدون كسر CSS الأساسي */
+    .kpis{display:grid;gap:10px;grid-template-columns:repeat(4,minmax(0,1fr))}
+    @media (max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    .kpi{padding:12px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#fff,rgba(255,255,255,.92))}
+    .kpi b{font-size:18px}
+    .kpi .small{margin-top:2px}
+    .memberRow{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px dashed var(--line)}
+    .memberName{font-weight:700}
+    .memberMeta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:12px;color:var(--muted)}
+    .muted{color:var(--muted)}
+    .monthCards{display:grid;gap:10px}
+    .monthCard{border:1px solid var(--line);border-radius:16px;background:#fff;padding:12px;cursor:pointer}
+    .monthCard:hover{box-shadow:0 12px 30px rgba(0,0,0,.06)}
+    .monthTop{display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap;align-items:flex-start}
+    .monthTop .badge{white-space:nowrap}
+    .monthCard .small{line-height:1.55}
+  </style>
 </head>
 <body>
 <div class="container">
   <div class="header">
     <div class="title">
       <h1>لوحة الإدارة</h1>
-      <div class="sub">مناسبة للجوال والكمبيوتر — إدارة الأعضاء + جدولة + إشعار واتساب</div>
+      <div class="sub">إدارة الأعضاء + جدولة شهرية + إشعار واتساب</div>
     </div>
     <div class="toolbar">
       <span id="who" class="badge">—</span>
@@ -20,108 +39,144 @@
     </div>
   </div>
 
-  <!-- Tabs (أفضل للجوال) -->
-  <div class="tabsBar" id="tabsBar">
-    <button class="tabBtn active" data-tab="membersSec">👥 الأعضاء</button>
-    <button class="tabBtn" data-tab="mealSec">➕ مناسبة</button>
-    <button class="tabBtn" data-tab="monthSec">📅 جدول الشهر</button>
-  </div>
-
   <div id="status" class="notice">جارٍ التحقق…</div>
 
-  <!-- 1) Members -->
-  <section id="membersSec" class="adminSection">
-    <div class="card">
-      <div style="font-weight:700">الأعضاء</div>
-      <div class="small">أضف/عطّل أعضاء</div>
-
-      <label>إضافة عضو</label>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <input id="newMember" class="input" placeholder="اسم العضو" style="flex:1 1 220px"/>
-        <button id="addMember" class="btn">إضافة</button>
+  <!-- ملخص سريع -->
+  <div class="card" style="margin-top:12px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <div style="font-weight:700">ملخص سريع</div>
+        <div class="small">يعطيك صورة سريعة قبل الجدولة.</div>
       </div>
-
-      <div class="hr"></div>
-      <div id="membersList" class="small">—</div>
+      <span id="monthLabelTop" class="badge">—</span>
     </div>
-  </section>
+    <div class="hr"></div>
 
-  <!-- 2) Meal editor -->
-  <section id="mealSec" class="adminSection hidden">
-    <div class="card" style="margin-top:12px">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-        <div>
-          <div style="font-weight:700">إضافة / تعديل مناسبة</div>
-          <div class="small">التاريخ + (من → إلى) يدعم عبور منتصف الليل.</div>
-        </div>
-        <span class="badge">المكان: <b style="color:#111827">الاستراحة</b></span>
+    <div class="kpis">
+      <div class="kpi">
+        <div class="small">الأعضاء (مفعّل)</div>
+        <b id="kpiActiveMembers">—</b>
       </div>
-
-      <div class="grid2" style="margin-top:10px">
-        <div>
-          <label>النوع</label>
-          <select id="mealType" class="input">
-            <option value="futoor">فطور</option>
-            <option value="ghada">غدا</option>
-            <option value="asha">عشا</option>
-            <option value="suhoor">سحور</option>
-          </select>
-        </div>
-        <div>
-          <label>التاريخ (ميلادي)</label>
-          <input id="date" class="input" type="date"/>
-        </div>
-        <div>
-          <label>من</label>
-          <input id="startTime" class="input" type="time" value="19:00"/>
-        </div>
-        <div>
-          <label>إلى</label>
-          <input id="endTime" class="input" type="time" value="00:00"/>
-        </div>
+      <div class="kpi">
+        <div class="small">الأعضاء (الإجمالي)</div>
+        <b id="kpiTotalMembers">—</b>
       </div>
-
-      <label>ملاحظات (اختياري)</label>
-      <textarea id="notes" class="input" rows="2" placeholder="مثال: كل واحد يجيب شيء..."></textarea>
-
-      <div class="hr"></div>
-      <div id="dupWarn" class="notice warn" style="display:none"></div>
-
-      <div style="font-weight:700;margin:6px 0">الداعين</div>
-      <div id="hostsPicker" class="small">—</div>
-
-      <div class="hr"></div>
-
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between">
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button id="saveMeal" class="btn">حفظ</button>
-          <button id="resetForm" class="btn secondary">تفريغ</button>
-          <button id="deleteMeal" class="btn danger" style="display:none">حذف</button>
-        </div>
-        <button id="waPublish" class="btn secondary">📢 إشعار واتساب (هذا الشهر)</button>
+      <div class="kpi">
+        <div class="small">مناسبات هذا الشهر</div>
+        <b id="kpiMonthMeals">—</b>
       </div>
-
-      <div id="editNote" class="small" style="margin-top:10px"></div>
+      <div class="kpi">
+        <div class="small">القادمة</div>
+        <b id="kpiUpcoming">—</b>
+      </div>
     </div>
-  </section>
 
-  <!-- 3) Month view -->
-  <section id="monthSec" class="adminSection hidden">
-    <div class="card" style="margin-top:12px">
-      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
-        <div>
-          <div style="font-weight:700">جدول الشهر</div>
-          <div class="small">على الجوال: بطاقات — على الكمبيوتر: جدول</div>
+    <div id="kpiNext" class="notice ok" style="margin-top:10px;display:none"></div>
+  </div>
+
+  <div class="row" style="margin-top:12px">
+    <!-- الأعضاء -->
+    <div class="col">
+      <div class="card">
+        <div style="font-weight:700">الأعضاء</div>
+        <div class="small">أضف/عطّل أعضاء — مع بحث سريع</div>
+
+        <label>إضافة عضو</label>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <input id="newMember" class="input" placeholder="اسم العضو" style="flex:1 1 220px"/>
+          <button id="addMember" class="btn">إضافة</button>
         </div>
-        <div class="toolbar">
-          <input id="monthPick" class="input" type="month"/>
-          <button id="reloadMonth" class="btn secondary">تحديث</button>
+
+        <div class="hr"></div>
+
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <input id="memberSearch" class="input" placeholder="بحث في الأعضاء…" style="flex:1 1 220px"/>
+          <label class="pill" style="cursor:pointer">
+            <input id="showInactive" type="checkbox" style="accent-color:var(--accent);margin-inline-end:6px"/>
+            عرض الموقوفين
+          </label>
         </div>
+
+        <div class="hr"></div>
+        <div id="membersList" class="small">—</div>
       </div>
-      <div class="hr"></div>
-      <div id="monthTableWrap">—</div>
     </div>
-  </section>
+
+    <!-- جدولة -->
+    <div class="col">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div>
+            <div style="font-weight:700">إضافة / تعديل مناسبة</div>
+            <div class="small">التاريخ + (من → إلى) يدعم عبور منتصف الليل.</div>
+          </div>
+          <span class="badge">المكان: <b style="color:#111827">الاستراحة</b></span>
+        </div>
+
+        <div class="grid2" style="margin-top:10px">
+          <div>
+            <label>النوع</label>
+            <select id="mealType" class="input">
+              <option value="futoor">فطور</option>
+              <option value="ghada">غدا</option>
+              <option value="asha">عشا</option>
+              <option value="suhoor">سحور</option>
+            </select>
+          </div>
+          <div>
+            <label>التاريخ (ميلادي)</label>
+            <input id="date" class="input" type="date"/>
+            <div id="hijriPreview" class="small muted" style="margin-top:6px">—</div>
+          </div>
+          <div>
+            <label>من</label>
+            <input id="startTime" class="input" type="time" value="19:00"/>
+          </div>
+          <div>
+            <label>إلى</label>
+            <input id="endTime" class="input" type="time" value="00:00"/>
+          </div>
+        </div>
+
+        <label>ملاحظات (اختياري)</label>
+        <textarea id="notes" class="input" rows="2" placeholder="مثال: كل واحد يجيب شيء..."></textarea>
+
+        <div class="hr"></div>
+        <div id="dupWarn" class="notice warn" style="display:none"></div>
+
+        <div style="font-weight:700;margin:6px 0">الداعين</div>
+        <div id="hostsPicker" class="small">—</div>
+
+        <div class="hr"></div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button id="saveMeal" class="btn">حفظ</button>
+            <button id="resetForm" class="btn secondary">تفريغ</button>
+            <button id="deleteMeal" class="btn danger" style="display:none">حذف</button>
+          </div>
+          <button id="waPublish" class="btn secondary">📢 إشعار واتساب (هذا الشهر)</button>
+        </div>
+
+        <div id="editNote" class="small" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <div style="font-weight:700">جدول الشهر</div>
+        <div class="small">اضغط على بطاقة/صف للتعديل</div>
+      </div>
+      <div class="toolbar">
+        <input id="monthPick" class="input" type="month"/>
+        <button id="reloadMonth" class="btn secondary">تحديث</button>
+      </div>
+    </div>
+    <div class="hr"></div>
+    <div id="monthTableWrap">—</div>
+  </div>
 
 </div>
 
@@ -131,7 +186,7 @@
     computeEndISO, formatGregorian, formatHijriUmmAlQura, formatTime12,
     waLink, el
   } from "./assets/app.js";
-  import { ACCESS_TOKEN, APP_TITLE } from "./assets/config.js";
+  import { APP_TITLE } from "./assets/config.js";
 
   setTitle("لوحة الإدارة");
 
@@ -139,8 +194,17 @@
   const whoEl = document.getElementById("who");
   const logoutBtn = document.getElementById("logout");
 
+  const kpiActiveMembers = document.getElementById("kpiActiveMembers");
+  const kpiTotalMembers = document.getElementById("kpiTotalMembers");
+  const kpiMonthMeals = document.getElementById("kpiMonthMeals");
+  const kpiUpcoming = document.getElementById("kpiUpcoming");
+  const kpiNext = document.getElementById("kpiNext");
+  const monthLabelTop = document.getElementById("monthLabelTop");
+
   const newMemberEl = document.getElementById("newMember");
   const addMemberBtn = document.getElementById("addMember");
+  const memberSearch = document.getElementById("memberSearch");
+  const showInactive = document.getElementById("showInactive");
   const membersList = document.getElementById("membersList");
 
   const mealTypeEl = document.getElementById("mealType");
@@ -148,6 +212,7 @@
   const startTimeEl = document.getElementById("startTime");
   const endTimeEl = document.getElementById("endTime");
   const notesEl = document.getElementById("notes");
+  const hijriPreview = document.getElementById("hijriPreview");
   const hostsPicker = document.getElementById("hostsPicker");
   const dupWarn = document.getElementById("dupWarn");
 
@@ -161,33 +226,12 @@
   const monthTableWrap = document.getElementById("monthTableWrap");
   const waPublishBtn = document.getElementById("waPublish");
 
-  // Tabs
-  const tabsBarEl = document.getElementById("tabsBar");
-  const sectionIds = ["membersSec","mealSec","monthSec"];
-  const sections = sectionIds.map(id => document.getElementById(id));
-
-  function setActiveTab(id){
-    sections.forEach(sec => sec?.classList.toggle("hidden", sec.id !== id));
-    [...tabsBarEl.querySelectorAll(".tabBtn")].forEach(b => b.classList.toggle("active", b.dataset.tab === id));
-    document.getElementById(id)?.scrollIntoView({ behavior:"smooth", block:"start" });
-  }
-
-  tabsBarEl?.addEventListener("click", (e) => {
-    const btn = e.target.closest(".tabBtn");
-    if (!btn) return;
-    setActiveTab(btn.dataset.tab);
-  });
-
   let members = [];
-  let editingMealId = null;
   let selectedHostIds = new Set();
+  let editingMealId = null;
 
-  function isMobile(){
-    return window.matchMedia && window.matchMedia("(max-width: 720px)").matches;
-  }
-
-  function setStatus(kind, text){
-    statusEl.className = kind ? `notice ${kind}` : "notice";
+  function toast(kind, text){
+    statusEl.className = kind ? ("notice " + kind) : "notice";
     statusEl.textContent = text;
   }
 
@@ -197,15 +241,19 @@
       location.href = "./login.html";
       return null;
     }
-    whoEl.textContent = user.email || user.id;
-
-    const { data, error } = await supabase.rpc("is_admin");
-    if (error || !data){
-      setStatus("warn", "غير مصرح. تأكد أن بريدك ضمن قائمة الأدمن في Supabase.");
-      return null;
-    }
-    setStatus("ok", "تم التحقق. يمكنك التعديل.");
+    whoEl.textContent = user.email || "—";
+    toast("ok", "تم تسجيل الدخول.");
     return user;
+  }
+
+  function renderHijriPreview(){
+    if (!dateEl.value){ hijriPreview.textContent = "—"; return; }
+    const iso = dateEl.value + "T12:00:00+03:00";
+    try{
+      hijriPreview.textContent = "الموافق " + formatHijriUmmAlQura(iso);
+    }catch{
+      hijriPreview.textContent = "—";
+    }
   }
 
   async function loadMembers(){
@@ -222,28 +270,43 @@
     members = data || [];
     renderMembers();
     renderHostsPicker();
+    updateKPIs();
   }
 
   function renderMembers(){
-    if (!members.length){
-      membersList.textContent = "لا يوجد أعضاء بعد.";
+    const q = (memberSearch.value || "").trim().toLowerCase();
+    const includeInactive = !!showInactive.checked;
+
+    const list = members
+      .filter(m => includeInactive ? true : m.is_active)
+      .filter(m => q ? m.full_name.toLowerCase().includes(q) : true);
+
+    if (!list.length){
+      membersList.textContent = "لا توجد نتائج.";
       return;
     }
+
     const wrap = el("div", {}, []);
-    members.forEach(m => {
-      const line = el("div", { style:"display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px dashed var(--line)" }, [
-        el("div", {}, [
-          el("div", { style:"font-weight:600" }, [m.full_name]),
-          el("div", { class:"small" }, [m.is_active ? "مفعّل" : "موقوف"])
-        ]),
-        el("button", { class:"btn secondary", onclick: async () => {
-          const { error } = await supabase.from("members").update({ is_active: !m.is_active }).eq("id", m.id);
-          if (error) alert(error.message);
-          await loadMembers();
-        }}, [m.is_active ? "إيقاف" : "تفعيل"])
+    list.forEach(m => {
+      const left = el("div", {}, [
+        el("div", { class:"memberName" }, [m.full_name]),
+        el("div", { class:"memberMeta" }, [
+          el("span", { class:"pill" }, [m.is_active ? "✅ مفعّل" : "⛔️ موقوف"])
+        ])
       ]);
-      wrap.appendChild(line);
+
+      const btn = el("button", {
+        class:"btn secondary",
+        onclick: async () => {
+          const { error } = await supabase.from("members").update({ is_active: !m.is_active }).eq("id", m.id);
+          if (error) return alert(error.message);
+          await loadMembers();
+        }
+      }, [m.is_active ? "إيقاف" : "تفعيل"]);
+
+      wrap.appendChild(el("div", { class:"memberRow" }, [left, btn]));
     });
+
     membersList.innerHTML = "";
     membersList.appendChild(wrap);
   }
@@ -256,243 +319,186 @@
     }
     const wrap = el("div", { style:"display:flex;flex-wrap:wrap;gap:10px" }, []);
     active.forEach(m => {
-      const id = `host_${m.id}`;
-      const cb = el("input", { type:"checkbox", id, onchange: async (e) => {
-        if (e.target.checked) selectedHostIds.add(m.id);
-        else selectedHostIds.delete(m.id);
-        await updateDuplicateWarning();
-      }});
-      cb.checked = selectedHostIds.has(m.id);
-
-      wrap.appendChild(
-        el("label", { for:id, style:"display:flex;gap:8px;align-items:center;cursor:pointer;padding:10px 12px;border:1px solid var(--line);border-radius:999px;background:#fff" }, [
-          cb, el("span", {}, [m.full_name])
-        ])
-      );
+      const checked = selectedHostIds.has(m.id);
+      const chip = el("label", {
+        class: "chip",
+        style: "cursor:pointer;display:inline-flex;align-items:center;gap:8px"
+      }, [
+        el("input", {
+          type:"checkbox",
+          checked,
+          onchange: (e) => {
+            if (e.target.checked) selectedHostIds.add(m.id);
+            else selectedHostIds.delete(m.id);
+          }
+        }),
+        m.full_name
+      ]);
+      wrap.appendChild(chip);
     });
     hostsPicker.innerHTML = "";
     hostsPicker.appendChild(wrap);
   }
 
+  function buildMonthLink(month){
+    const base = new URL("./schedule.html", location.href);
+    base.searchParams.set("month", month);
+    return base.toString();
+  }
+
   async function updateDuplicateWarning(){
     dupWarn.style.display = "none";
-    dupWarn.textContent = "";
+    const date = dateEl.value;
+    if (!date) return;
 
-    const d = dateEl.value;
-    if (!d || selectedHostIds.size === 0) return;
-
-    const month = d.slice(0,7);
-    const start = `${month}-01T00:00:00+03:00`;
-    const [yy, mm] = month.split("-").map(Number);
+    const month = date.slice(0,7);
+    const start = month + "-01T00:00:00+03:00";
+    const parts = month.split("-").map(Number);
+    const yy = parts[0], mm = parts[1];
     const endDate = new Date(Date.UTC(yy, mm, 1, 0, 0, 0));
-    const end = `${endDate.getUTCFullYear()}-${String(endDate.getUTCMonth()+1).padStart(2,'0')}-${String(endDate.getUTCDate()).padStart(2,'0')}T00:00:00+03:00`;
+    const end = endDate.getUTCFullYear() + "-" + String(endDate.getUTCMonth()+1).padStart(2,"0") + "-" + String(endDate.getUTCDate()).padStart(2,"0") + "T00:00:00+03:00";
+
+    const hostIds = Array.from(selectedHostIds);
+    if (!hostIds.length) return;
 
     const { data, error } = await supabase
-      .from("meal_hosts")
-      .select("member_id, meals(starts_at)")
-      .gte("meals.starts_at", start)
-      .lt("meals.starts_at", end);
+      .from("meals")
+      .select("id, starts_at, meal_hosts(member_id)")
+      .gte("starts_at", start)
+      .lt("starts_at", end);
 
     if (error) return;
 
-    const already = new Set((data||[]).map(r => r.member_id));
-    const dupIds = [...selectedHostIds].filter(id => already.has(id));
-    if (!dupIds.length) return;
+    const clashes = [];
+    (data||[]).forEach(r=>{
+      if (editingMealId && r.id === editingMealId) return;
+      const ids = (r.meal_hosts||[]).map(x=>x.member_id);
+      const overlap = hostIds.filter(id=>ids.includes(id));
+      if (overlap.length){
+        const names = overlap.map(id => members.find(m=>m.id===id)?.full_name).filter(Boolean);
+        if (names.length) clashes.push({ when: r.starts_at, names });
+      }
+    });
 
-    const names = dupIds.map(id => members.find(m => m.id === id)?.full_name).filter(Boolean).join("، ");
-    dupWarn.textContent = `تنبيه: سبق إضافة ${names} كداعي/داعين خلال نفس الشهر. (لا يمنع الحفظ)`;
-    dupWarn.style.display = "block";
-  }
-
-  async function addMember(){
-    const name = (newMemberEl.value || "").trim();
-    if (!name) return;
-    const { error } = await supabase.from("members").insert({ full_name: name });
-    if (error) alert(error.message);
-    newMemberEl.value = "";
-    await loadMembers();
+    if (clashes.length){
+      const parts2 = clashes.slice(0,3).map(c => "• " + formatGregorian(c.when) + ": " + c.names.join(" – "));
+      dupWarn.innerHTML = "تنبيه: بعض الداعين مضافين بالفعل هذا الشهر (لن يمنع الحفظ):<br/>" + parts2.join("<br/>");
+      dupWarn.style.display = "block";
+    }
   }
 
   function resetForm(){
     editingMealId = null;
-    selectedHostIds = new Set();
-    mealTypeEl.value = "asha";
-    notesEl.value = "";
     deleteMealBtn.style.display = "none";
-    editNote.textContent = "";
+    notesEl.value = "";
+    selectedHostIds = new Set();
     renderHostsPicker();
-    updateDuplicateWarning();
+    editNote.textContent = "";
+    dupWarn.style.display = "none";
+    renderHijriPreview();
   }
 
   async function saveMeal(){
-    const d = dateEl.value;
-    if (!d){ alert("اختر التاريخ"); return; }
-    const { startISO, endISO } = computeEndISO(d, startTimeEl.value, endTimeEl.value);
-    if (new Date(endISO) <= new Date(startISO)){ alert("وقت النهاية يجب أن يكون بعد البداية"); return; }
-    if (selectedHostIds.size === 0){
-      if (!confirm("لم يتم اختيار داعين. هل تريد الحفظ بدون داعين؟")) return;
-    }
+    const meal = mealTypeEl.value;
+    const date = dateEl.value;
+    const startTime = startTimeEl.value || "19:00";
+    const endTime = endTimeEl.value || "00:00";
+    if (!date) return alert("اختر التاريخ.");
 
-    const payload = {
-      meal: mealTypeEl.value,
-      starts_at: startISO,
-      ends_at: endISO,
-      notes: (notesEl.value || "").trim() || null
-    };
+    const startsAt = date + "T" + startTime + ":00+03:00";
+    const endsAt = computeEndISO(date, startTime, endTime);
+    const notes = (notesEl.value || "").trim() || null;
+
+    toast("", "جارٍ الحفظ…");
 
     let mealId = editingMealId;
+
     if (editingMealId){
-      const { error } = await supabase.from("meals").update(payload).eq("id", editingMealId);
-      if (error){ alert(error.message); return; }
-      editNote.innerHTML = "<b>ملاحظة:</b> تعديل الموعد لا يحدّث تقاويم الأعضاء تلقائيًا. يُفضّل إرسال إشعار تعديل.";
+      const { error } = await supabase
+        .from("meals")
+        .update({ meal, starts_at: startsAt, ends_at: endsAt, notes })
+        .eq("id", editingMealId);
+
+      if (error){ toast("warn", error.message); return; }
     } else {
-      const { data, error } = await supabase.from("meals").insert(payload).select("id").single();
-      if (error){ alert(error.message); return; }
+      const { data, error } = await supabase
+        .from("meals")
+        .insert({ meal, starts_at: startsAt, ends_at: endsAt, notes })
+        .select("id")
+        .single();
+
+      if (error){ toast("warn", error.message); return; }
       mealId = data.id;
-      editNote.textContent = "";
     }
 
     await supabase.from("meal_hosts").delete().eq("meal_id", mealId);
-    if (selectedHostIds.size){
-      const rows = [...selectedHostIds].map(member_id => ({ meal_id: mealId, member_id }));
-      const { error } = await supabase.from("meal_hosts").insert(rows);
-      if (error){ alert(error.message); return; }
+
+    const hostRows = Array.from(selectedHostIds).map(member_id => ({ meal_id: mealId, member_id }));
+    if (hostRows.length){
+      const { error } = await supabase.from("meal_hosts").insert(hostRows);
+      if (error){ toast("warn", error.message); return; }
     }
 
-    setStatus("ok", "تم الحفظ.");
-    await loadMonthView();
-    editingMealId = mealId;
-    deleteMealBtn.style.display = "inline-flex";
+    toast("ok", "تم الحفظ.");
+    editNote.textContent = editingMealId ? "تم تحديث الموعد." : "تمت إضافة الموعد.";
+    await loadMonthTable();
+    await updateDuplicateWarning();
   }
 
   async function deleteMeal(){
     if (!editingMealId) return;
-    if (!confirm("تأكيد حذف هذه المناسبة؟")) return;
+    if (!confirm("تأكيد حذف المناسبة؟")) return;
+
+    toast("", "جارٍ الحذف…");
+    await supabase.from("meal_hosts").delete().eq("meal_id", editingMealId);
     const { error } = await supabase.from("meals").delete().eq("id", editingMealId);
-    if (error){ alert(error.message); return; }
-    setStatus("ok", "تم الحذف.");
+    if (error){ toast("warn", error.message); return; }
+    toast("ok", "تم الحذف.");
     resetForm();
-    await loadMonthView();
+    await loadMonthTable();
   }
 
-  function buildMonthLink(month){
-    const base = window.location.origin + window.location.pathname.replace("admin.html","schedule.html");
-    return `${base}?month=${month}&access=${encodeURIComponent(ACCESS_TOKEN)}`;
+  function updateKPIs(meals){
+    const total = members.length;
+    const active = members.filter(m=>m.is_active).length;
+    kpiTotalMembers.textContent = total ? String(total) : "0";
+    kpiActiveMembers.textContent = active ? String(active) : "0";
+
+    if (!meals) return;
+
+    const now = new Date();
+    const upcoming = meals.filter(r => new Date(r.starts_at) >= now);
+    kpiMonthMeals.textContent = String(meals.length);
+    kpiUpcoming.textContent = String(upcoming.length);
+
+    const next = upcoming.sort((a,b)=> new Date(a.starts_at)-new Date(b.starts_at))[0];
+    if (next){
+      kpiNext.style.display = "block";
+      kpiNext.textContent =
+        "⏭️ الأقرب: " + mealLabel(next.meal) + " — " +
+        formatGregorian(next.starts_at) + " (" +
+        formatTime12(next.starts_at) + " – " + formatTime12(next.ends_at) + ")";
+    } else {
+      kpiNext.style.display = "none";
+    }
   }
 
-  function publishWhatsApp(){
-    const month = monthPick.value || getMonthParam();
-    const link = buildMonthLink(month);
-    const msg =
-`📅 تم تحديث جدول ${APP_TITLE}
-${monthLabel(month)}
-
-افتح الجدول واضغط (أضف للتقويم) لإضافة مناسبتك:
-${link}`;
-    window.open(waLink(msg), "_blank");
+  function isMobileView(){
+    return window.matchMedia("(max-width: 820px)").matches;
   }
 
-  function applyEditFromRow(r, hostIds){
-    editingMealId = r.id;
-    deleteMealBtn.style.display = "inline-flex";
-    mealTypeEl.value = r.meal;
-
-    const s = new Date(r.starts_at);
-    const e = new Date(r.ends_at);
-
-    const partsS = new Intl.DateTimeFormat("en-CA", { timeZone:"Asia/Riyadh", year:"numeric", month:"2-digit", day:"2-digit" }).format(s);
-    dateEl.value = partsS;
-
-    const timeS = new Intl.DateTimeFormat("en-GB", { timeZone:"Asia/Riyadh", hour:"2-digit", minute:"2-digit", hour12:false }).format(s);
-    const timeE = new Intl.DateTimeFormat("en-GB", { timeZone:"Asia/Riyadh", hour:"2-digit", minute:"2-digit", hour12:false }).format(e);
-    startTimeEl.value = timeS;
-    endTimeEl.value = timeE;
-
-    notesEl.value = r.notes || "";
-    selectedHostIds = new Set(hostIds);
-    renderHostsPicker();
-    updateDuplicateWarning();
-    editNote.textContent = "وضع التعديل: احفظ لتحديث الموعد ثم (اختياري) أرسل إشعار تعديل عبر واتساب.";
-
-    setActiveTab("mealSec");
-  }
-
-  function renderMonthAsTable(meals){
-    const table = el("table", { class:"table" }, []);
-    table.appendChild(el("thead", {}, [
-      el("tr", {}, [
-        el("th", {}, ["النوع"]),
-        el("th", {}, ["التاريخ"]),
-        el("th", {}, ["الوقت"]),
-        el("th", {}, ["الداعين"]),
-        el("th", {}, ["ملاحظات"]),
-      ])
-    ]));
-
-    const tbody = el("tbody", {}, []);
-    (meals||[]).forEach(r => {
-      const hostIds = (r.meal_hosts || []).map(x => x.member_id);
-      const hostNames = hostIds.map(id => members.find(m => m.id === id)?.full_name).filter(Boolean);
-
-      const tr = el("tr", { style:"cursor:pointer", onclick: () => applyEditFromRow(r, hostIds) }, [
-        el("td", {}, [mealLabel(r.meal)]),
-        el("td", {}, [
-          el("div", {}, [formatGregorian(r.starts_at)]),
-          el("div", { class:"small" }, [formatHijriUmmAlQura(r.starts_at)])
-        ]),
-        el("td", {}, [`${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}`]),
-        el("td", {}, [hostNames.join(" – ") || "—"]),
-        el("td", {}, [r.notes || "—"]),
-      ]);
-      tbody.appendChild(tr);
-    });
-
-    table.appendChild(tbody);
-    monthTableWrap.innerHTML = "";
-    monthTableWrap.appendChild(table);
-  }
-
-  function renderMonthAsCards(meals){
-    const wrap = el("div", { style:"display:grid;gap:12px" }, []);
-    (meals||[]).forEach(r => {
-      const hostIds = (r.meal_hosts || []).map(x => x.member_id);
-      const hostNames = hostIds.map(id => members.find(m => m.id === id)?.full_name).filter(Boolean);
-      const hostsText = hostNames.join(" – ") || "—";
-
-      const card = el("div", { class:"card mealCard", "data-meal": r.meal }, [
-        el("div", { class:"mealTop" }, [
-          el("div", {}, [
-            el("div", { class:"mealName" }, [mealLabel(r.meal)]),
-            el("div", { class:"mealMeta" }, [
-              el("div", {}, [formatGregorian(r.starts_at)]),
-              el("div", {}, [formatHijriUmmAlQura(r.starts_at)]),
-              el("div", {}, [`${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}`]),
-            ])
-          ]),
-          el("button", { class:"btn secondary", onclick: () => applyEditFromRow(r, hostIds) }, ["✏️ تعديل"])
-        ]),
-        el("div", { class:"mealHosts" }, [
-          el("span", { class:"small" }, ["الداعين: "]),
-          el("span", {}, [hostsText])
-        ]),
-        r.notes ? el("div", { class:"small", style:"margin-top:8px" }, [`ملاحظة: ${r.notes}`]) : null
-      ]);
-
-      wrap.appendChild(card);
-    });
-
-    monthTableWrap.innerHTML = "";
-    monthTableWrap.appendChild(wrap);
-  }
-
-  async function loadMonthView(){
+  async function loadMonthTable(){
     const month = monthPick.value || getMonthParam();
     monthPick.value = month;
 
-    const start = `${month}-01T00:00:00+03:00`;
-    const [yy, mm] = month.split("-").map(Number);
+    monthLabelTop.textContent = monthLabel(month);
+    waPublishBtn.textContent = "📢 إشعار واتساب (" + monthLabel(month) + ")";
+
+    const start = month + "-01T00:00:00+03:00";
+    const parts = month.split("-").map(Number);
+    const yy = parts[0], mm = parts[1];
     const endDate = new Date(Date.UTC(yy, mm, 1, 0, 0, 0));
-    const end = `${endDate.getUTCFullYear()}-${String(endDate.getUTCMonth()+1).padStart(2,'0')}-${String(endDate.getUTCDate()).padStart(2,'0')}T00:00:00+03:00`;
+    const end = endDate.getFullYear() + "-" + String(endDate.getMonth()+1).padStart(2,"0") + "-" + String(endDate.getDate()).padStart(2,"0") + "T00:00:00+03:00";
 
     const { data: meals, error } = await supabase
       .from("meals")
@@ -507,60 +513,155 @@ ${link}`;
     }
 
     const rows = meals || [];
-    if (!rows.length){
-      monthTableWrap.innerHTML = "";
-      monthTableWrap.appendChild(
-        el("div", { class:"notice" }, ["لا توجد بيانات لهذا الشهر حتى الآن."])
-      );
-      waPublishBtn.textContent = `📢 إشعار واتساب (${monthLabel(month)})`;
-      return;
+    updateKPIs(rows);
+
+    const hostNamesOf = (r) => {
+      const ids = (r.meal_hosts || []).map(x => x.member_id);
+      return ids.map(id => members.find(m => m.id === id)?.full_name).filter(Boolean);
+    };
+
+    const onEdit = async (r) => {
+      editingMealId = r.id;
+      deleteMealBtn.style.display = "inline-flex";
+      mealTypeEl.value = r.meal;
+
+      const s = new Date(r.starts_at);
+      const e = new Date(r.ends_at);
+
+      const partsS = new Intl.DateTimeFormat("en-CA", { timeZone:"Asia/Riyadh", year:"numeric", month:"2-digit", day:"2-digit" }).format(s);
+      dateEl.value = partsS;
+
+      const timeS = new Intl.DateTimeFormat("en-GB", { timeZone:"Asia/Riyadh", hour:"2-digit", minute:"2-digit", hour12:false }).format(s);
+      const timeE = new Intl.DateTimeFormat("en-GB", { timeZone:"Asia/Riyadh", hour:"2-digit", minute:"2-digit", hour12:false }).format(e);
+      startTimeEl.value = timeS;
+      endTimeEl.value = timeE;
+
+      notesEl.value = r.notes || "";
+      const ids = (r.meal_hosts || []).map(x => x.member_id);
+      selectedHostIds = new Set(ids);
+      renderHostsPicker();
+      renderHijriPreview();
+      await updateDuplicateWarning();
+      editNote.textContent = "وضع التعديل: احفظ لتحديث الموعد ثم (اختياري) أرسل إشعار تعديل عبر واتساب.";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    monthTableWrap.innerHTML = "";
+
+    if (isMobileView()){
+      const wrap = el("div", { class:"monthCards" }, []);
+      rows.forEach(r=>{
+        const hostNames = hostNamesOf(r);
+        const card = el("div", { class:"monthCard", onclick: () => onEdit(r) }, [
+          el("div", { class:"monthTop" }, [
+            el("span", { class:"badge" }, [mealLabel(r.meal)]),
+            el("span", { class:"pill" }, [formatTime12(r.starts_at) + " – " + formatTime12(r.ends_at)]),
+          ]),
+          el("div", { style:"margin-top:8px" }, [
+            el("div", {}, [formatGregorian(r.starts_at)]),
+            el("div", { class:"small muted" }, ["الموافق " + formatHijriUmmAlQura(r.starts_at)]),
+          ]),
+          el("div", { class:"small", style:"margin-top:8px" }, [
+            el("b", {}, ["الداعين: "]),
+            hostNames.join(" – ") || "—"
+          ]),
+          el("div", { class:"small muted", style:"margin-top:6px" }, [r.notes || "—"])
+        ]);
+        wrap.appendChild(card);
+      });
+      monthTableWrap.appendChild(wrap);
+    } else {
+      const table = el("table", { class:"table" }, []);
+      table.appendChild(el("thead", {}, [
+        el("tr", {}, [
+          el("th", {}, ["النوع"]),
+          el("th", {}, ["التاريخ"]),
+          el("th", {}, ["الوقت"]),
+          el("th", {}, ["الداعين"]),
+          el("th", {}, ["ملاحظات"]),
+        ])
+      ]));
+
+      const tbody = el("tbody", {}, []);
+      rows.forEach(r=>{
+        const hostNames = hostNamesOf(r);
+        const tr = el("tr", { style:"cursor:pointer", onclick: () => onEdit(r) }, [
+          el("td", {}, [mealLabel(r.meal)]),
+          el("td", {}, [
+            el("div", {}, [formatGregorian(r.starts_at)]),
+            el("div", { class:"small" }, ["الموافق " + formatHijriUmmAlQura(r.starts_at)])
+          ]),
+          el("td", {}, [formatTime12(r.starts_at) + " – " + formatTime12(r.ends_at)]),
+          el("td", {}, [hostNames.join(" – ") || "—"]),
+          el("td", {}, [r.notes || "—"]),
+        ]);
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      monthTableWrap.appendChild(table);
     }
-
-    if (isMobile()) renderMonthAsCards(rows);
-    else renderMonthAsTable(rows);
-
-    waPublishBtn.textContent = `📢 إشعار واتساب (${monthLabel(month)})`;
   }
 
-  // Refresh view on resize (عشان إذا لفّ الجوال/كبر الشاشة)
-  window.addEventListener("resize", () => {
-    const tabActive = tabsBarEl.querySelector(".tabBtn.active")?.dataset?.tab;
-    if (tabActive === "monthSec") loadMonthView();
-  });
+  function publishWhatsApp(){
+    const month = monthPick.value || getMonthParam();
+    const link = buildMonthLink(month);
+    const msg =
+      "📅 تم تحديث جدول " + APP_TITLE + "\n" +
+      monthLabel(month) + "\n\n" +
+      "افتح الجدول واضغط (أضف للتقويم) لإضافة مناسبتك:\n" +
+      link;
+
+    window.open(waLink(msg), "_blank");
+  }
 
   logoutBtn.addEventListener("click", async () => {
     await supabase.auth.signOut();
     location.href = "./login.html";
   });
 
-  addMemberBtn.addEventListener("click", addMember);
-  newMemberEl.addEventListener("keydown", (e) => { if (e.key === "Enter") addMember(); });
+  addMemberBtn.addEventListener("click", async () => {
+    const name = (newMemberEl.value || "").trim();
+    if (!name) return;
+    const { error } = await supabase.from("members").insert({ full_name: name, is_active: true });
+    if (error) return alert(error.message);
+    newMemberEl.value = "";
+    await loadMembers();
+  });
+
+  newMemberEl.addEventListener("keydown", (e) => { if (e.key === "Enter") addMemberBtn.click(); });
+
+  memberSearch.addEventListener("input", renderMembers);
+  showInactive.addEventListener("change", renderMembers);
 
   resetFormBtn.addEventListener("click", resetForm);
   saveMealBtn.addEventListener("click", saveMeal);
   deleteMealBtn.addEventListener("click", deleteMeal);
 
-  reloadMonthBtn.addEventListener("click", loadMonthView);
-  monthPick.addEventListener("change", loadMonthView);
+  reloadMonthBtn.addEventListener("click", loadMonthTable);
+  monthPick.addEventListener("change", loadMonthTable);
   waPublishBtn.addEventListener("click", publishWhatsApp);
 
-  dateEl.addEventListener("change", updateDuplicateWarning);
+  dateEl.addEventListener("change", () => { renderHijriPreview(); updateDuplicateWarning(); });
+  startTimeEl.addEventListener("change", updateDuplicateWarning);
+  endTimeEl.addEventListener("change", updateDuplicateWarning);
+  mealTypeEl.addEventListener("change", updateDuplicateWarning);
 
   (async () => {
     const user = await requireAdmin();
     if (!user) return;
 
     const today = new Date();
-    dateEl.value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+    dateEl.value = today.getFullYear() + "-" + String(today.getMonth()+1).padStart(2,"0") + "-" + String(today.getDate()).padStart(2,"0");
+    renderHijriPreview();
 
     const month = getMonthParam();
     monthPick.value = month;
+    monthLabelTop.textContent = monthLabel(month);
 
     await loadMembers();
-    await loadMonthView();
+    await loadMonthTable();
     resetForm();
-
-    setActiveTab("membersSec");
   })();
 </script>
 </body>
