@@ -12,7 +12,7 @@
   <div class="header">
     <div class="title">
       <h1>لوحة الإدارة</h1>
-      <div class="sub">إدارة الأعضاء + جدولة شهرية + إشعار واتساب</div>
+      <div class="sub">مناسبة للجوال والكمبيوتر — إدارة الأعضاء + جدولة + إشعار واتساب</div>
     </div>
     <div class="toolbar">
       <span id="who" class="badge">—</span>
@@ -20,98 +20,108 @@
     </div>
   </div>
 
+  <!-- Tabs (أفضل للجوال) -->
+  <div class="tabsBar" id="tabsBar">
+    <button class="tabBtn active" data-tab="membersSec">👥 الأعضاء</button>
+    <button class="tabBtn" data-tab="mealSec">➕ مناسبة</button>
+    <button class="tabBtn" data-tab="monthSec">📅 جدول الشهر</button>
+  </div>
+
   <div id="status" class="notice">جارٍ التحقق…</div>
 
-  <div class="row" style="margin-top:12px">
-    <div class="col">
-      <div class="card">
-        <div style="font-weight:700">الأعضاء</div>
-        <div class="small">أضف/عطّل أعضاء</div>
+  <!-- 1) Members -->
+  <section id="membersSec" class="adminSection">
+    <div class="card">
+      <div style="font-weight:700">الأعضاء</div>
+      <div class="small">أضف/عطّل أعضاء</div>
 
-        <label>إضافة عضو</label>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <input id="newMember" class="input" placeholder="اسم العضو" style="flex:1 1 220px"/>
-          <button id="addMember" class="btn">إضافة</button>
-        </div>
-
-        <div class="hr"></div>
-        <div id="membersList" class="small">—</div>
+      <label>إضافة عضو</label>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <input id="newMember" class="input" placeholder="اسم العضو" style="flex:1 1 220px"/>
+        <button id="addMember" class="btn">إضافة</button>
       </div>
+
+      <div class="hr"></div>
+      <div id="membersList" class="small">—</div>
     </div>
+  </section>
 
-    <div class="col">
-      <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-          <div>
-            <div style="font-weight:700">إضافة / تعديل مناسبة</div>
-            <div class="small">التاريخ + (من → إلى) يدعم عبور منتصف الليل.</div>
-          </div>
-          <span class="badge">المكان: <b style="color:#111827">الاستراحة</b></span>
+  <!-- 2) Meal editor -->
+  <section id="mealSec" class="adminSection hidden">
+    <div class="card" style="margin-top:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:700">إضافة / تعديل مناسبة</div>
+          <div class="small">التاريخ + (من → إلى) يدعم عبور منتصف الليل.</div>
         </div>
-
-        <div class="grid2" style="margin-top:10px">
-          <div>
-            <label>النوع</label>
-            <select id="mealType" class="input">
-              <option value="futoor">فطور</option>
-              <option value="ghada">غدا</option>
-              <option value="asha">عشا</option>
-              <option value="suhoor">سحور</option>
-            </select>
-          </div>
-          <div>
-            <label>التاريخ (ميلادي)</label>
-            <input id="date" class="input" type="date"/>
-          </div>
-          <div>
-            <label>من</label>
-            <input id="startTime" class="input" type="time" value="19:00"/>
-          </div>
-          <div>
-            <label>إلى</label>
-            <input id="endTime" class="input" type="time" value="00:00"/>
-          </div>
-        </div>
-
-        <label>ملاحظات (اختياري)</label>
-        <textarea id="notes" class="input" rows="2" placeholder="مثال: كل واحد يجيب شيء..."></textarea>
-
-        <div class="hr"></div>
-        <div id="dupWarn" class="notice warn" style="display:none"></div>
-
-        <div style="font-weight:700;margin:6px 0">الداعين</div>
-        <div id="hostsPicker" class="small">—</div>
-
-        <div class="hr"></div>
-
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between">
-          <div style="display:flex;gap:10px;flex-wrap:wrap">
-            <button id="saveMeal" class="btn">حفظ</button>
-            <button id="resetForm" class="btn secondary">تفريغ</button>
-            <button id="deleteMeal" class="btn danger" style="display:none">حذف</button>
-          </div>
-          <button id="waPublish" class="btn secondary">📢 إشعار واتساب (هذا الشهر)</button>
-        </div>
-
-        <div id="editNote" class="small" style="margin-top:10px"></div>
+        <span class="badge">المكان: <b style="color:#111827">الاستراحة</b></span>
       </div>
+
+      <div class="grid2" style="margin-top:10px">
+        <div>
+          <label>النوع</label>
+          <select id="mealType" class="input">
+            <option value="futoor">فطور</option>
+            <option value="ghada">غدا</option>
+            <option value="asha">عشا</option>
+            <option value="suhoor">سحور</option>
+          </select>
+        </div>
+        <div>
+          <label>التاريخ (ميلادي)</label>
+          <input id="date" class="input" type="date"/>
+        </div>
+        <div>
+          <label>من</label>
+          <input id="startTime" class="input" type="time" value="19:00"/>
+        </div>
+        <div>
+          <label>إلى</label>
+          <input id="endTime" class="input" type="time" value="00:00"/>
+        </div>
+      </div>
+
+      <label>ملاحظات (اختياري)</label>
+      <textarea id="notes" class="input" rows="2" placeholder="مثال: كل واحد يجيب شيء..."></textarea>
+
+      <div class="hr"></div>
+      <div id="dupWarn" class="notice warn" style="display:none"></div>
+
+      <div style="font-weight:700;margin:6px 0">الداعين</div>
+      <div id="hostsPicker" class="small">—</div>
+
+      <div class="hr"></div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button id="saveMeal" class="btn">حفظ</button>
+          <button id="resetForm" class="btn secondary">تفريغ</button>
+          <button id="deleteMeal" class="btn danger" style="display:none">حذف</button>
+        </div>
+        <button id="waPublish" class="btn secondary">📢 إشعار واتساب (هذا الشهر)</button>
+      </div>
+
+      <div id="editNote" class="small" style="margin-top:10px"></div>
     </div>
-  </div>
+  </section>
 
-  <div class="card" style="margin-top:12px">
-    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
-      <div>
-        <div style="font-weight:700">جدول الشهر</div>
-        <div class="small">اضغط على صف للتعديل</div>
+  <!-- 3) Month table -->
+  <section id="monthSec" class="adminSection hidden">
+    <div class="card" style="margin-top:12px">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:700">جدول الشهر</div>
+          <div class="small">اضغط على صف للتعديل</div>
+        </div>
+        <div class="toolbar">
+          <input id="monthPick" class="input" type="month"/>
+          <button id="reloadMonth" class="btn secondary">تحديث</button>
+        </div>
       </div>
-      <div class="toolbar">
-        <input id="monthPick" class="input" type="month"/>
-        <button id="reloadMonth" class="btn secondary">تحديث</button>
-      </div>
+      <div class="hr"></div>
+      <div id="monthTableWrap">—</div>
     </div>
-    <div class="hr"></div>
-    <div id="monthTableWrap">—</div>
-  </div>
+  </section>
 
 </div>
 
@@ -151,6 +161,24 @@
   const monthTableWrap = document.getElementById("monthTableWrap");
   const waPublishBtn = document.getElementById("waPublish");
 
+  // Tabs
+  const tabsBarEl = document.getElementById("tabsBar");
+  const sectionIds = ["membersSec","mealSec","monthSec"];
+  const sections = sectionIds.map(id => document.getElementById(id));
+
+  function setActiveTab(id){
+    // على الجوال نخفي غير المختار، وعلى الكمبيوتر CSS يعرض الكل
+    sections.forEach(sec => sec?.classList.toggle("hidden", sec.id !== id));
+    [...tabsBarEl.querySelectorAll(".tabBtn")].forEach(b => b.classList.toggle("active", b.dataset.tab === id));
+    document.getElementById(id)?.scrollIntoView({ behavior:"smooth", block:"start" });
+  }
+
+  tabsBarEl?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".tabBtn");
+    if (!btn) return;
+    setActiveTab(btn.dataset.tab);
+  });
+
   let members = [];
   let editingMealId = null;
   let selectedHostIds = new Set();
@@ -167,6 +195,7 @@
       return null;
     }
     whoEl.textContent = user.email || user.id;
+
     const { data, error } = await supabase.rpc("is_admin");
     if (error || !data){
       setStatus("warn", "غير مصرح. تأكد أن بريدك ضمن قائمة الأدمن في Supabase.");
@@ -199,7 +228,7 @@
     }
     const wrap = el("div", {}, []);
     members.forEach(m => {
-      const line = el("div", { style:"display:flex;gap:10px;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--line)" }, [
+      const line = el("div", { style:"display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px dashed var(--line)" }, [
         el("div", {}, [
           el("div", { style:"font-weight:600" }, [m.full_name]),
           el("div", { class:"small" }, [m.is_active ? "مفعّل" : "موقوف"])
@@ -233,7 +262,7 @@
       cb.checked = selectedHostIds.has(m.id);
 
       wrap.appendChild(
-        el("label", { for:id, style:"display:flex;gap:8px;align-items:center;cursor:pointer;padding:8px 10px;border:1px solid var(--line);border-radius:999px;background:#fff" }, [
+        el("label", { for:id, style:"display:flex;gap:8px;align-items:center;cursor:pointer;padding:10px 12px;border:1px solid var(--line);border-radius:999px;background:#fff" }, [
           cb, el("span", {}, [m.full_name])
         ])
       );
@@ -384,6 +413,7 @@
     (meals||[]).forEach(r => {
       const hostIds = (r.meal_hosts || []).map(x => x.member_id);
       const hostNames = hostIds.map(id => members.find(m => m.id === id)?.full_name).filter(Boolean);
+
       const tr = el("tr", { style:"cursor:pointer", onclick: async () => {
         editingMealId = r.id;
         deleteMealBtn.style.display = "inline-flex";
@@ -405,7 +435,9 @@
         renderHostsPicker();
         await updateDuplicateWarning();
         editNote.textContent = "وضع التعديل: احفظ لتحديث الموعد ثم (اختياري) أرسل إشعار تعديل عبر واتساب.";
-        window.scrollTo({ top: 0, behavior: "smooth" });
+
+        // أفضل للجوال: افتح تبويب "مناسبة"
+        setActiveTab("mealSec");
       }}, [
         el("td", {}, [mealLabel(r.meal)]),
         el("td", {}, [
@@ -469,6 +501,9 @@ ${link}`;
     await loadMembers();
     await loadMonthTable();
     resetForm();
+
+    // افتراضيًا افتح تبويب الأعضاء في الجوال (فعال أصلاً)
+    setActiveTab("membersSec");
   })();
 </script>
 </body>
