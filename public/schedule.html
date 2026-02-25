@@ -71,17 +71,29 @@
     return new Intl.DateTimeFormat("ar-SA", { year:"numeric", month:"long", timeZone: TZ }).format(d);
   }
 
-  function formatGregorian(iso){
+  // ✅ اليوم + التاريخ الميلادي (رقمي) مثل: "الخميس 26/02/2026"
+  function formatGregorianDayAndDate(iso){
     const d = new Date(iso);
-    return new Intl.DateTimeFormat("ar-SA", { weekday:"long", year:"numeric", month:"long", day:"numeric", timeZone: TZ }).format(d);
+    const weekday = new Intl.DateTimeFormat("ar-SA", { weekday:"long", timeZone: TZ }).format(d);
+
+    // نطلع التاريخ بشكل ثابت YYYY-MM-DD ثم نحوله لـ DD/MM/YYYY (أوضح للجوال)
+    const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(d);
+    const [y, m, da] = ymd.split("-");
+    const dmy = `${da}/${m}/${y}`;
+
+    return `${weekday} ${dmy}`;
   }
 
-  function formatHijriUmmAlQura(iso){
+  // ✅ الموافق بالهجري (أم القرى) مثل: "الموافق 17 شعبان 1447 هـ"
+  function formatHijriUmmAlQuraWithPrefix(iso){
     const d = new Date(iso);
     try{
-      return new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", { year:"numeric", month:"long", day:"numeric", timeZone: TZ }).format(d);
+      const hijri = new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", {
+        year:"numeric", month:"long", day:"numeric", timeZone: TZ
+      }).format(d);
+      return `الموافق ${hijri}`;
     }catch{
-      return "—";
+      return "الموافق —";
     }
   }
 
@@ -172,12 +184,15 @@
     const box = $("nextBox");
     if (!r){ box.style.display="none"; return; }
 
+    const g = formatGregorianDayAndDate(r.starts_at);
+    const h = formatHijriUmmAlQuraWithPrefix(r.starts_at);
+
     box.style.display="block";
     box.innerHTML = `
-      ⏭️ <b>أقرب مناسبة:</b> ${mealLabel(r.meal)} — ${formatGregorian(r.starts_at)}
-      <div style="margin-top:6px" class="small">
-        ⏰ ${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}
-      </div>
+      ⏭️ <b>أقرب مناسبة:</b> ${mealLabel(r.meal)}
+      <div style="margin-top:6px" class="small">📅 ${g}</div>
+      <div class="small">🕌 ${h}</div>
+      <div style="margin-top:6px" class="small">⏰ ${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}</div>
     `;
   }
 
@@ -197,9 +212,14 @@
       const hostNames = (r._hostNames || []);
       const hostsText = hostNames.length ? hostNames.join(" – ") : "—";
 
+      const g = formatGregorianDayAndDate(r.starts_at);
+      const h = formatHijriUmmAlQuraWithPrefix(r.starts_at);
+
       const title = `${APP_TITLE} — ${mealLabel(r.meal)}`;
       const desc =
 `${mealLabel(r.meal)}
+${g}
+${h}
 الداعين: ${hostsText}
 ${r.notes ? ("ملاحظة: " + r.notes) : ""}`.trim();
 
@@ -218,8 +238,8 @@ ${r.notes ? ("ملاحظة: " + r.notes) : ""}`.trim();
         <div class="mealBadge">🍽️ ${mealLabel(r.meal)}</div>
         <div style="height:8px"></div>
         <div class="mealMeta">
-          <div><b style="color:#0f172a">${formatGregorian(r.starts_at)}</b></div>
-          <div>${formatHijriUmmAlQura(r.starts_at)}</div>
+          <div><b style="color:#0f172a">📅 ${g}</b></div>
+          <div>🕌 ${h}</div>
           <div>⏰ ${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}</div>
         </div>
       `;
@@ -271,7 +291,6 @@ ${r.notes ? ("ملاحظة: " + r.notes) : ""}`.trim();
     const endDate = new Date(Date.UTC(yy, mm, 1, 0, 0, 0));
     const end = `${endDate.getUTCFullYear()}-${pad2(endDate.getUTCMonth()+1)}-${pad2(endDate.getUTCDate())}T00:00:00+03:00`;
 
-    // 1) meals
     const { data: meals, error: e1 } = await supabase
       .from("meals")
       .select("id, meal, starts_at, ends_at, notes")
@@ -295,7 +314,6 @@ ${r.notes ? ("ملاحظة: " + r.notes) : ""}`.trim();
       return;
     }
 
-    // 2) load hosts names (robust)
     const mealIds = rows.map(r=>r.id);
     const { data: links, error: e2 } = await supabase
       .from("meal_hosts")
