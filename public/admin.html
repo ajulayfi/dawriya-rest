@@ -105,13 +105,13 @@
     </div>
   </section>
 
-  <!-- 3) Month table -->
+  <!-- 3) Month view -->
   <section id="monthSec" class="adminSection hidden">
     <div class="card" style="margin-top:12px">
       <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
         <div>
           <div style="font-weight:700">جدول الشهر</div>
-          <div class="small">اضغط على صف للتعديل</div>
+          <div class="small">على الجوال: بطاقات — على الكمبيوتر: جدول</div>
         </div>
         <div class="toolbar">
           <input id="monthPick" class="input" type="month"/>
@@ -167,7 +167,6 @@
   const sections = sectionIds.map(id => document.getElementById(id));
 
   function setActiveTab(id){
-    // على الجوال نخفي غير المختار، وعلى الكمبيوتر CSS يعرض الكل
     sections.forEach(sec => sec?.classList.toggle("hidden", sec.id !== id));
     [...tabsBarEl.querySelectorAll(".tabBtn")].forEach(b => b.classList.toggle("active", b.dataset.tab === id));
     document.getElementById(id)?.scrollIntoView({ behavior:"smooth", block:"start" });
@@ -182,6 +181,10 @@
   let members = [];
   let editingMealId = null;
   let selectedHostIds = new Set();
+
+  function isMobile(){
+    return window.matchMedia && window.matchMedia("(max-width: 720px)").matches;
+  }
 
   function setStatus(kind, text){
     statusEl.className = kind ? `notice ${kind}` : "notice";
@@ -357,7 +360,7 @@
     }
 
     setStatus("ok", "تم الحفظ.");
-    await loadMonthTable();
+    await loadMonthView();
     editingMealId = mealId;
     deleteMealBtn.style.display = "inline-flex";
   }
@@ -369,7 +372,7 @@
     if (error){ alert(error.message); return; }
     setStatus("ok", "تم الحذف.");
     resetForm();
-    await loadMonthTable();
+    await loadMonthView();
   }
 
   function buildMonthLink(month){
@@ -377,7 +380,112 @@
     return `${base}?month=${month}&access=${encodeURIComponent(ACCESS_TOKEN)}`;
   }
 
-  async function loadMonthTable(){
+  function publishWhatsApp(){
+    const month = monthPick.value || getMonthParam();
+    const link = buildMonthLink(month);
+    const msg =
+`📅 تم تحديث جدول ${APP_TITLE}
+${monthLabel(month)}
+
+افتح الجدول واضغط (أضف للتقويم) لإضافة مناسبتك:
+${link}`;
+    window.open(waLink(msg), "_blank");
+  }
+
+  function applyEditFromRow(r, hostIds){
+    editingMealId = r.id;
+    deleteMealBtn.style.display = "inline-flex";
+    mealTypeEl.value = r.meal;
+
+    const s = new Date(r.starts_at);
+    const e = new Date(r.ends_at);
+
+    const partsS = new Intl.DateTimeFormat("en-CA", { timeZone:"Asia/Riyadh", year:"numeric", month:"2-digit", day:"2-digit" }).format(s);
+    dateEl.value = partsS;
+
+    const timeS = new Intl.DateTimeFormat("en-GB", { timeZone:"Asia/Riyadh", hour:"2-digit", minute:"2-digit", hour12:false }).format(s);
+    const timeE = new Intl.DateTimeFormat("en-GB", { timeZone:"Asia/Riyadh", hour:"2-digit", minute:"2-digit", hour12:false }).format(e);
+    startTimeEl.value = timeS;
+    endTimeEl.value = timeE;
+
+    notesEl.value = r.notes || "";
+    selectedHostIds = new Set(hostIds);
+    renderHostsPicker();
+    updateDuplicateWarning();
+    editNote.textContent = "وضع التعديل: احفظ لتحديث الموعد ثم (اختياري) أرسل إشعار تعديل عبر واتساب.";
+
+    setActiveTab("mealSec");
+  }
+
+  function renderMonthAsTable(meals){
+    const table = el("table", { class:"table" }, []);
+    table.appendChild(el("thead", {}, [
+      el("tr", {}, [
+        el("th", {}, ["النوع"]),
+        el("th", {}, ["التاريخ"]),
+        el("th", {}, ["الوقت"]),
+        el("th", {}, ["الداعين"]),
+        el("th", {}, ["ملاحظات"]),
+      ])
+    ]));
+
+    const tbody = el("tbody", {}, []);
+    (meals||[]).forEach(r => {
+      const hostIds = (r.meal_hosts || []).map(x => x.member_id);
+      const hostNames = hostIds.map(id => members.find(m => m.id === id)?.full_name).filter(Boolean);
+
+      const tr = el("tr", { style:"cursor:pointer", onclick: () => applyEditFromRow(r, hostIds) }, [
+        el("td", {}, [mealLabel(r.meal)]),
+        el("td", {}, [
+          el("div", {}, [formatGregorian(r.starts_at)]),
+          el("div", { class:"small" }, [formatHijriUmmAlQura(r.starts_at)])
+        ]),
+        el("td", {}, [`${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}`]),
+        el("td", {}, [hostNames.join(" – ") || "—"]),
+        el("td", {}, [r.notes || "—"]),
+      ]);
+      tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+    monthTableWrap.innerHTML = "";
+    monthTableWrap.appendChild(table);
+  }
+
+  function renderMonthAsCards(meals){
+    const wrap = el("div", { style:"display:grid;gap:12px" }, []);
+    (meals||[]).forEach(r => {
+      const hostIds = (r.meal_hosts || []).map(x => x.member_id);
+      const hostNames = hostIds.map(id => members.find(m => m.id === id)?.full_name).filter(Boolean);
+      const hostsText = hostNames.join(" – ") || "—";
+
+      const card = el("div", { class:"card mealCard", "data-meal": r.meal }, [
+        el("div", { class:"mealTop" }, [
+          el("div", {}, [
+            el("div", { class:"mealName" }, [mealLabel(r.meal)]),
+            el("div", { class:"mealMeta" }, [
+              el("div", {}, [formatGregorian(r.starts_at)]),
+              el("div", {}, [formatHijriUmmAlQura(r.starts_at)]),
+              el("div", {}, [`${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}`]),
+            ])
+          ]),
+          el("button", { class:"btn secondary", onclick: () => applyEditFromRow(r, hostIds) }, ["✏️ تعديل"])
+        ]),
+        el("div", { class:"mealHosts" }, [
+          el("span", { class:"small" }, ["الداعين: "]),
+          el("span", {}, [hostsText])
+        ]),
+        r.notes ? el("div", { class:"small", style:"margin-top:8px" }, [`ملاحظة: ${r.notes}`]) : null
+      ]);
+
+      wrap.appendChild(card);
+    });
+
+    monthTableWrap.innerHTML = "";
+    monthTableWrap.appendChild(wrap);
+  }
+
+  async function loadMonthView(){
     const month = monthPick.value || getMonthParam();
     monthPick.value = month;
 
@@ -398,77 +506,27 @@
       return;
     }
 
-    const table = el("table", { class:"table" }, []);
-    table.appendChild(el("thead", {}, [
-      el("tr", {}, [
-        el("th", {}, ["النوع"]),
-        el("th", {}, ["التاريخ"]),
-        el("th", {}, ["الوقت"]),
-        el("th", {}, ["الداعين"]),
-        el("th", {}, ["ملاحظات"]),
-      ])
-    ]));
+    const rows = meals || [];
+    if (!rows.length){
+      monthTableWrap.innerHTML = "";
+      monthTableWrap.appendChild(
+        el("div", { class:"notice" }, ["لا توجد بيانات لهذا الشهر حتى الآن."])
+      );
+      waPublishBtn.textContent = `📢 إشعار واتساب (${monthLabel(month)})`;
+      return;
+    }
 
-    const tbody = el("tbody", {}, []);
-    (meals||[]).forEach(r => {
-      const hostIds = (r.meal_hosts || []).map(x => x.member_id);
-      const hostNames = hostIds.map(id => members.find(m => m.id === id)?.full_name).filter(Boolean);
-
-      const tr = el("tr", { style:"cursor:pointer", onclick: async () => {
-        editingMealId = r.id;
-        deleteMealBtn.style.display = "inline-flex";
-        mealTypeEl.value = r.meal;
-
-        const s = new Date(r.starts_at);
-        const e = new Date(r.ends_at);
-
-        const partsS = new Intl.DateTimeFormat("en-CA", { timeZone:"Asia/Riyadh", year:"numeric", month:"2-digit", day:"2-digit" }).format(s);
-        dateEl.value = partsS;
-
-        const timeS = new Intl.DateTimeFormat("en-GB", { timeZone:"Asia/Riyadh", hour:"2-digit", minute:"2-digit", hour12:false }).format(s);
-        const timeE = new Intl.DateTimeFormat("en-GB", { timeZone:"Asia/Riyadh", hour:"2-digit", minute:"2-digit", hour12:false }).format(e);
-        startTimeEl.value = timeS;
-        endTimeEl.value = timeE;
-
-        notesEl.value = r.notes || "";
-        selectedHostIds = new Set(hostIds);
-        renderHostsPicker();
-        await updateDuplicateWarning();
-        editNote.textContent = "وضع التعديل: احفظ لتحديث الموعد ثم (اختياري) أرسل إشعار تعديل عبر واتساب.";
-
-        // أفضل للجوال: افتح تبويب "مناسبة"
-        setActiveTab("mealSec");
-      }}, [
-        el("td", {}, [mealLabel(r.meal)]),
-        el("td", {}, [
-          el("div", {}, [formatGregorian(r.starts_at)]),
-          el("div", { class:"small" }, [formatHijriUmmAlQura(r.starts_at)])
-        ]),
-        el("td", {}, [`${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}`]),
-        el("td", {}, [hostNames.join(" – ") || "—"]),
-        el("td", {}, [r.notes || "—"]),
-      ]);
-      tbody.appendChild(tr);
-    });
-
-    table.appendChild(tbody);
-    monthTableWrap.innerHTML = "";
-    monthTableWrap.appendChild(table);
+    if (isMobile()) renderMonthAsCards(rows);
+    else renderMonthAsTable(rows);
 
     waPublishBtn.textContent = `📢 إشعار واتساب (${monthLabel(month)})`;
   }
 
-  function publishWhatsApp(){
-    const month = monthPick.value || getMonthParam();
-    const link = buildMonthLink(month);
-    const msg =
-`📅 تم تحديث جدول ${APP_TITLE}
-${monthLabel(month)}
-
-افتح الجدول واضغط (أضف للتقويم) لإضافة مناسبتك:
-${link}`;
-    window.open(waLink(msg), "_blank");
-  }
+  // Refresh view on resize (عشان إذا لفّ الجوال/كبر الشاشة)
+  window.addEventListener("resize", () => {
+    const tabActive = tabsBarEl.querySelector(".tabBtn.active")?.dataset?.tab;
+    if (tabActive === "monthSec") loadMonthView();
+  });
 
   logoutBtn.addEventListener("click", async () => {
     await supabase.auth.signOut();
@@ -482,8 +540,8 @@ ${link}`;
   saveMealBtn.addEventListener("click", saveMeal);
   deleteMealBtn.addEventListener("click", deleteMeal);
 
-  reloadMonthBtn.addEventListener("click", loadMonthTable);
-  monthPick.addEventListener("change", loadMonthTable);
+  reloadMonthBtn.addEventListener("click", loadMonthView);
+  monthPick.addEventListener("change", loadMonthView);
   waPublishBtn.addEventListener("click", publishWhatsApp);
 
   dateEl.addEventListener("change", updateDuplicateWarning);
@@ -499,10 +557,9 @@ ${link}`;
     monthPick.value = month;
 
     await loadMembers();
-    await loadMonthTable();
+    await loadMonthView();
     resetForm();
 
-    // افتراضيًا افتح تبويب الأعضاء في الجوال (فعال أصلاً)
     setActiveTab("membersSec");
   })();
 </script>
