@@ -12,7 +12,7 @@
   <div class="header">
     <div class="title">
       <h1 id="pageTitle">دورية الاستراحة</h1>
-      <div class="sub" id="pageSub">جدول الشهر + إضافة للتقويم</div>
+      <div class="sub">الجدول الشهري + إضافة للتقويم</div>
     </div>
     <div class="toolbar">
       <span class="badge" id="monthBadge">—</span>
@@ -26,7 +26,7 @@
     <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
       <div>
         <div style="font-weight:700">جدول الشهر</div>
-        <div class="small">اضغط “أضف للتقويم” لإضافة دعوتك في تقويمك.</div>
+        <div class="small">اضغط “أضف للتقويم” لإضافة المناسبة.</div>
       </div>
       <div class="toolbar">
         <input id="monthPick" class="input" type="month"/>
@@ -36,43 +36,25 @@
     <div class="hr"></div>
     <div id="list">—</div>
   </div>
-
-  <div class="card" style="margin-top:12px">
-    <div style="font-weight:700">مشاركة رابط الشهر</div>
-    <div class="small">هذا الرابط نفسه يُرسل في مجموعة الواتساب.</div>
-    <div class="hr"></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-      <input id="shareLink" class="input" readonly style="flex:1 1 320px"/>
-      <button id="copyLink" class="btn secondary">نسخ الرابط</button>
-    </div>
-  </div>
 </div>
 
 <script type="module">
-  import { SUPABASE_URL, SUPABASE_ANON_KEY, ACCESS_TOKEN, APP_TITLE, DEFAULT_LOCATION, TZ } from "./assets/config.js";
+  import { SUPABASE_URL, SUPABASE_ANON_KEY, APP_TITLE, DEFAULT_LOCATION, TZ } from "./assets/config.js";
 
-  // ------- helpers -------
   const $ = (id) => document.getElementById(id);
-
-  function pad2(n){ return String(n).padStart(2,"0"); }
+  const pad2 = (n)=>String(n).padStart(2,"0");
 
   function getMonthParam(){
-    const url = new URL(location.href);
-    const m = url.searchParams.get("month");
+    const u = new URL(location.href);
+    const m = u.searchParams.get("month");
     if (m && /^\d{4}-\d{2}$/.test(m)) return m;
     const d = new Date();
     return `${d.getFullYear()}-${pad2(d.getMonth()+1)}`;
   }
 
-  function getAccessParam(){
-    const url = new URL(location.href);
-    return url.searchParams.get("access") || "";
-  }
-
   function monthLabel(month){
-    // month: YYYY-MM
-    const [y, m] = month.split("-").map(Number);
-    const d = new Date(Date.UTC(y, m-1, 1));
+    const [y,m]=month.split("-").map(Number);
+    const d = new Date(Date.UTC(y,m-1,1));
     return new Intl.DateTimeFormat("ar-SA", { year:"numeric", month:"long", timeZone: TZ }).format(d);
   }
 
@@ -83,7 +65,6 @@
 
   function formatHijriUmmAlQura(iso){
     const d = new Date(iso);
-    // calendar islamic-umalqura مدعوم غالبًا في المتصفحات الحديثة
     try{
       return new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", { year:"numeric", month:"long", day:"numeric", timeZone: TZ }).format(d);
     }catch{
@@ -101,34 +82,18 @@
   }
 
   function makeIcs({ title, description, location, start, end }){
-    // start/end: Date objects (UTC generated from ISO)
     const dt = (d) => {
-      // ICS wants UTC format: YYYYMMDDTHHMMSSZ
-      const y = d.getUTCFullYear();
-      const mo = pad2(d.getUTCMonth()+1);
-      const da = pad2(d.getUTCDate());
-      const hh = pad2(d.getUTCHours());
-      const mm = pad2(d.getUTCMinutes());
-      const ss = pad2(d.getUTCSeconds());
+      const y=d.getUTCFullYear(), mo=pad2(d.getUTCMonth()+1), da=pad2(d.getUTCDate());
+      const hh=pad2(d.getUTCHours()), mm=pad2(d.getUTCMinutes()), ss=pad2(d.getUTCSeconds());
       return `${y}${mo}${da}T${hh}${mm}${ss}Z`;
     };
-
+    const esc = (s) => String(s||"")
+      .replace(/\\/g,"\\\\").replace(/\n/g,"\\n").replace(/,/g,"\\,").replace(/;/g,"\\;");
     const uid = `${crypto.randomUUID()}@dawriya-rest`;
     const now = dt(new Date());
 
-    // Escape
-    const esc = (s) => String(s || "")
-      .replace(/\\/g,"\\\\")
-      .replace(/\n/g,"\\n")
-      .replace(/,/g,"\\,")
-      .replace(/;/g,"\\;");
-
     return [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//Dawriya Rest//AR//EN",
-      "CALSCALE:GREGORIAN",
-      "METHOD:PUBLISH",
+      "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Dawriya Rest//AR//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH",
       "BEGIN:VEVENT",
       `UID:${uid}`,
       `DTSTAMP:${now}`,
@@ -137,8 +102,7 @@
       `SUMMARY:${esc(title)}`,
       `DESCRIPTION:${esc(description)}`,
       `LOCATION:${esc(location)}`,
-      "END:VEVENT",
-      "END:VCALENDAR"
+      "END:VEVENT","END:VCALENDAR"
     ].join("\r\n");
   }
 
@@ -150,51 +114,18 @@
     document.body.appendChild(a);
     a.click();
     a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+    setTimeout(()=>URL.revokeObjectURL(a.href), 1500);
   }
 
-  // ------- Supabase client with token header -------
-  const access = getAccessParam() || "";
-  const headerToken = access || ACCESS_TOKEN; // لو ما ارسل access نستخدم الافتراضي (للاختبار)
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  const supabase = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_ANON_KEY,
-    {
-      global: {
-        headers: {
-          "x-access-token": headerToken
-        }
-      }
-    }
-  );
-
-  // ------- UI init -------
-  document.title = `${APP_TITLE} — جدول الشهر`;
   $("pageTitle").textContent = APP_TITLE;
-
   const month = getMonthParam();
   $("monthPick").value = month;
   $("monthBadge").textContent = monthLabel(month);
 
-  const shareUrl = new URL(location.href);
-  shareUrl.searchParams.set("month", month);
-  shareUrl.searchParams.set("access", ACCESS_TOKEN);
-  $("shareLink").value = shareUrl.toString();
-
-  $("copyLink").addEventListener("click", async () => {
-    try{
-      await navigator.clipboard.writeText($("shareLink").value);
-      $("msg").className = "notice ok";
-      $("msg").textContent = "تم نسخ الرابط.";
-    }catch{
-      $("msg").className = "notice warn";
-      $("msg").textContent = "لم أستطع النسخ تلقائيًا. انسخ يدويًا.";
-    }
-  });
-
-  $("reload").addEventListener("click", () => loadMonth($("monthPick").value));
-  $("monthPick").addEventListener("change", () => loadMonth($("monthPick").value));
+  $("reload").addEventListener("click", ()=>loadMonth($("monthPick").value));
+  $("monthPick").addEventListener("change", ()=>loadMonth($("monthPick").value));
 
   async function loadMonth(m){
     $("monthBadge").textContent = monthLabel(m);
@@ -204,45 +135,77 @@
 
     const start = `${m}-01T00:00:00+03:00`;
     const [yy, mm] = m.split("-").map(Number);
-    const endDate = new Date(Date.UTC(yy, mm, 1, 0, 0, 0)); // first day next month (UTC)
+    const endDate = new Date(Date.UTC(yy, mm, 1, 0, 0, 0));
     const end = `${endDate.getUTCFullYear()}-${pad2(endDate.getUTCMonth()+1)}-${pad2(endDate.getUTCDate())}T00:00:00+03:00`;
 
-    const { data: meals, error } = await supabase
+    // 1) meals
+    const { data: meals, error: e1 } = await supabase
       .from("meals")
-      .select("id, meal, starts_at, ends_at, notes, meal_hosts(member_id), members:meal_hosts(member_id, members(full_name))")
+      .select("id, meal, starts_at, ends_at, notes")
       .gte("starts_at", start)
       .lt("starts_at", end)
       .order("starts_at", { ascending:true });
 
-    if (error){
-      $("msg").className = "notice warn";
-      $("msg").textContent = `تعذر تحميل الجدول: ${error.message}`;
-      $("list").innerHTML = "";
-      $("list").appendChild(document.createTextNode("—"));
+    if (e1){
+      $("msg").className="notice warn";
+      $("msg").textContent = `تعذر تحميل meals: ${e1.message}`;
+      $("list").textContent="—";
       return;
     }
 
     const rows = meals || [];
     if (!rows.length){
-      $("msg").className = "notice";
+      $("msg").className="notice";
       $("msg").textContent = "لا توجد بيانات لهذا الشهر حتى الآن.";
       $("list").innerHTML = `<div class="notice">لا توجد مناسبات.</div>`;
       return;
     }
 
-    $("msg").className = "notice ok";
+    // 2) meal_hosts for those meals
+    const mealIds = rows.map(r=>r.id);
+    const { data: links, error: e2 } = await supabase
+      .from("meal_hosts")
+      .select("meal_id, member_id")
+      .in("meal_id", mealIds);
+
+    if (e2){
+      $("msg").className="notice warn";
+      $("msg").textContent = `تعذر تحميل الداعين: ${e2.message}`;
+      $("list").textContent="—";
+      return;
+    }
+
+    const memberIds = [...new Set((links||[]).map(x=>x.member_id))];
+    let membersMap = new Map();
+
+    if (memberIds.length){
+      const { data: mems, error: e3 } = await supabase
+        .from("members")
+        .select("id, full_name")
+        .in("id", memberIds);
+
+      if (!e3){
+        (mems||[]).forEach(m=>membersMap.set(m.id, m.full_name));
+      }
+    }
+
+    const hostsByMeal = new Map();
+    (links||[]).forEach(l=>{
+      if (!hostsByMeal.has(l.meal_id)) hostsByMeal.set(l.meal_id, []);
+      hostsByMeal.get(l.meal_id).push(membersMap.get(l.member_id) || "—");
+    });
+
+    $("msg").className="notice ok";
     $("msg").textContent = "تم تحميل الجدول.";
 
     const wrap = document.createElement("div");
-    wrap.style.display = "grid";
-    wrap.style.gap = "12px";
+    wrap.style.display="grid";
+    wrap.style.gap="12px";
 
     for (const r of rows){
-      const hostNames = (r.members || [])
-        .map(x => x?.members?.full_name)
-        .filter(Boolean);
+      const hostNames = (hostsByMeal.get(r.id) || []).filter(Boolean);
+      const hostsText = hostNames.length ? hostNames.join(" – ") : "—";
 
-      const hostsText = hostNames.join(" – ") || "—";
       const title = `${APP_TITLE} — ${mealLabel(r.meal)}`;
       const desc =
 `${mealLabel(r.meal)}
@@ -297,7 +260,7 @@ ${r.notes ? ("ملاحظة: " + r.notes) : ""}`.trim();
       if (r.notes){
         const note = document.createElement("div");
         note.className = "small";
-        note.style.marginTop = "8px";
+        note.style.marginTop="8px";
         note.textContent = `ملاحظة: ${r.notes}`;
         card.appendChild(note);
       }
@@ -305,17 +268,10 @@ ${r.notes ? ("ملاحظة: " + r.notes) : ""}`.trim();
       wrap.appendChild(card);
     }
 
-    $("list").innerHTML = "";
+    $("list").innerHTML="";
     $("list").appendChild(wrap);
-
-    // Update share link when month changes
-    const url = new URL(location.href);
-    url.searchParams.set("month", m);
-    url.searchParams.set("access", ACCESS_TOKEN);
-    $("shareLink").value = url.toString();
   }
 
-  // First load
   loadMonth(month);
 </script>
 </body>
