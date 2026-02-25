@@ -97,9 +97,9 @@ label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
 .mealCard[data-meal="suhoor"]::before{background:#7c3aed}
 
 .mealTop{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.mealName{font-weight:700;font-size:16px}
+.mealName{font-weight:800;font-size:16px}
 .mealMeta{color:var(--muted);font-size:13px;display:flex;flex-direction:column;gap:6px}
-.mealHosts{margin-top:10px;font-size:14px}
+.mealHosts{margin-top:10px;font-size:14px;line-height:1.6}
 
 .kbd{
   font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
@@ -158,13 +158,125 @@ label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
 .adminSection{ display:block; }
 .adminSection.hidden{ display:none; }
 
-/* Mobile improvements */
+/* ======================================
+   Schedule page enhancements
+   ====================================== */
+
+.stickyBar{
+  position: sticky;
+  top: 10px;
+  z-index: 30;
+  background: rgba(246,247,251,.92);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 10px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+  margin: 10px 0 12px;
+}
+
+.chips{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.chip{
+  border:1px solid var(--line);
+  background:#fff;
+  color:#111827;
+  padding:8px 10px;
+  border-radius:999px;
+  font-size:13px;
+  cursor:pointer;
+  user-select:none;
+}
+.chip.active{
+  background:#111827;
+  color:#fff;
+  border-color:#111827;
+}
+
+.cardsGrid{
+  display:grid;
+  gap:12px;
+}
+
+.mealCardPro{
+  padding:14px;
+  border-radius:20px;
+}
+
+.mealTopPro{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
+}
+
+.mealBadge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 10px;
+  border-radius:999px;
+  background:#fff;
+  border:1px solid var(--line);
+  color:var(--muted);
+  font-size:12px;
+}
+
+.primaryAction{
+  width:auto;
+  justify-content:center;
+  padding:12px 14px;
+  border-radius:14px;
+  font-weight:700;
+}
+
+.hostsBlock{
+  margin-top:10px;
+  padding:10px 10px;
+  border:1px dashed var(--line);
+  border-radius:14px;
+  background:rgba(2,6,23,.02);
+}
+
+.hostsTitle{
+  font-size:12px;
+  color:var(--muted);
+  margin-bottom:6px;
+}
+
+.hostsNames{
+  font-size:14px;
+  line-height:1.7;
+}
+
+.nextBanner{
+  border:1px solid rgba(34,197,94,.35);
+  background:rgba(34,197,94,.08);
+  color:#166534;
+  border-radius:18px;
+  padding:12px;
+  margin-bottom:12px;
+}
+
+.nextBanner b{color:#0f172a}
+
 @media (max-width:720px){
   .container{padding:14px}
-  .btn{width:100%;justify-content:center}
+  .btn{justify-content:center}
   .toolbar .btn{width:auto}
   .tabsBar{top:8px}
-  .adminSection{margin-bottom:12px}
+  .stickyBar{top:8px}
+  .primaryAction{width:100%} /* زر التقويم ياخذ عرض كامل للجوال */
+  .mealTopPro{flex-direction:column;align-items:stretch}
+  .mealMeta{gap:4px}
 }
 
 /* Desktop: show all sections (no hiding) */
@@ -179,4 +291,13 @@ label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
   }
   .tabBtn{flex: 0 0 auto;}
   .adminSection.hidden{display:block;}
+
+  .stickyBar{
+    position: static;
+    backdrop-filter:none;
+    background:transparent;
+    border:0;
+    padding:0;
+    margin: 8px 0 12px;
+  }
 }
