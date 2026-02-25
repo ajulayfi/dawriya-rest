@@ -1,619 +1,120 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>دورية الاستراحة — جدول الشهر</title>
-  <link rel="stylesheet" href="./assets/app.css"/>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>دورية الاستراحة</title>
+<link rel="stylesheet" href="./assets/app.css"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
+
 <body>
 <div class="container">
-  <div class="header">
-    <div class="title">
-      <h1 id="pageTitle">دورية الاستراحة</h1>
-      <div class="sub">الجدول الشهري — إضافة للتقويم أو مشاركة عبر واتساب</div>
-    </div>
-    <div class="toolbar">
-      <a class="btn secondary" href="./login.html">دخول الإدارة</a>
-    </div>
-  </div>
 
-  <!-- Banner: Next + Countdown -->
-  <div id="nextBox" class="nextBanner" style="display:none"></div>
+<h1 style="margin-bottom:8px">دورية الاستراحة</h1>
+<div id="nextBox" class="notice ok" style="display:none"></div>
+<div id="list" style="margin-top:20px"></div>
 
-  <!-- Sticky controls -->
-  <div class="stickyBar">
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <span class="badge" id="monthBadge">—</span>
-      <span class="badge">📍 <b style="color:#111827" id="loc">الاستراحة</b></span>
-    </div>
-
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <input id="monthPick" class="input" type="month" style="width:160px"/>
-      <button id="reload" class="btn secondary">تحديث</button>
-    </div>
-
-    <div class="chips" id="chips">
-      <button class="chip active" data-filter="all">الكل</button>
-      <button class="chip" data-filter="futoor">فطور</button>
-      <button class="chip" data-filter="ghada">غدا</button>
-      <button class="chip" data-filter="asha">عشا</button>
-      <button class="chip" data-filter="suhoor">سحور</button>
-      <button class="chip" data-filter="upcoming">القادمة</button>
-      <button class="chip" data-filter="past">المنتهية</button>
-    </div>
-  </div>
-
-  <div id="msg" class="notice">جارٍ تحميل الجدول…</div>
-
-  <div class="card" style="margin-top:12px">
-    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
-      <div>
-        <div style="font-weight:800">بطاقات الشهر</div>
-        <div class="small">اليوم مميز — المنتهية شبه مخفية.</div>
-      </div>
-      <button id="togglePast" class="btn secondary">إظهار/إخفاء المنتهية</button>
-    </div>
-    <div class="hr"></div>
-    <div id="list">—</div>
-  </div>
 </div>
 
 <script type="module">
+
 import { SUPABASE_URL, SUPABASE_ANON_KEY, APP_TITLE, DEFAULT_LOCATION, TZ } from "./assets/config.js";
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const $ = (id)=>document.getElementById(id);
-const pad2 = (n)=>String(n).padStart(2,"0");
 
-function getMonthParam(){
-  const u = new URL(location.href);
-  const m = u.searchParams.get("month");
-  if (m && /^\d{4}-\d{2}$/.test(m)) return m;
-  const d = new Date();
-  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}`;
-}
+const list = document.getElementById("list");
+const nextBox = document.getElementById("nextBox");
 
-function monthLabel(month){
-  const [y,m]=month.split("-").map(Number);
-  const d = new Date(Date.UTC(y,m-1,1));
-  return new Intl.DateTimeFormat("ar-SA", { year:"numeric", month:"long", timeZone: TZ }).format(d);
-}
-
-function mealLabel(key){
-  return ({ futoor:"فطور", ghada:"غدا", asha:"عشا", suhoor:"سحور" }[key] || key);
-}
-
-// ✅ اليوم + التاريخ الميلادي (رقمي)
-function formatGregorianDayAndDate(iso){
+function formatDate(iso){
   const d = new Date(iso);
-  const weekday = new Intl.DateTimeFormat("ar-SA",{weekday:"long",timeZone:TZ}).format(d);
-  const ymd = new Intl.DateTimeFormat("en-CA",{timeZone:TZ,year:"numeric",month:"2-digit",day:"2-digit"}).format(d);
-  const [y,m,da] = ymd.split("-");
-  return `${weekday} ${da}/${m}/${y}`;
+  return new Intl.DateTimeFormat("ar-SA", {
+    weekday:"long",
+    year:"numeric",
+    month:"2-digit",
+    day:"2-digit",
+    hour:"numeric",
+    minute:"2-digit",
+    hour12:true,
+    timeZone:TZ
+  }).format(d);
 }
 
-// ✅ الموافق بالهجري أم القرى
-function formatHijriWithPrefix(iso){
-  const d = new Date(iso);
-  try{
-    const h = new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura",{year:"numeric",month:"long",day:"numeric",timeZone:TZ}).format(d);
-    return `الموافق ${h}`;
-  }catch{
-    return "الموافق —";
-  }
+function isToday(iso){
+  const a = new Intl.DateTimeFormat("en-CA",{timeZone:TZ,year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(iso));
+  const b = new Intl.DateTimeFormat("en-CA",{timeZone:TZ,year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+  return a===b;
 }
 
-function formatTime12(iso){
-  const d = new Date(iso);
-  return new Intl.DateTimeFormat("ar-SA",{hour:"numeric",minute:"2-digit",hour12:true,timeZone:TZ}).format(d);
-}
-
-function makeIcs({ title, description, location, start, end }){
-  const dt = (d)=>{
-    const y=d.getUTCFullYear(),mo=pad2(d.getUTCMonth()+1),da=pad2(d.getUTCDate());
-    const hh=pad2(d.getUTCHours()),mm=pad2(d.getUTCMinutes()),ss=pad2(d.getUTCSeconds());
-    return `${y}${mo}${da}T${hh}${mm}${ss}Z`;
-  };
-  const esc = (s)=>String(s||"").replace(/\\/g,"\\\\").replace(/\n/g,"\\n").replace(/,/g,"\\,").replace(/;/g,"\\;");
-  const uid = `${crypto.randomUUID()}@dawriya-rest`;
-  const now = dt(new Date());
-  return [
-    "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Dawriya Rest//AR//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH",
-    "BEGIN:VEVENT",
-    `UID:${uid}`,
-    `DTSTAMP:${now}`,
-    `DTSTART:${dt(start)}`,
-    `DTEND:${dt(end)}`,
-    `SUMMARY:${esc(title)}`,
-    `DESCRIPTION:${esc(description)}`,
-    `LOCATION:${esc(location)}`,
-    "END:VEVENT","END:VCALENDAR"
-  ].join("\r\n");
-}
-
-function downloadIcs(icsText, filename){
-  const blob = new Blob([icsText], { type:"text/calendar;charset=utf-8" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(()=>URL.revokeObjectURL(a.href), 1500);
-}
-
-function waShare(text){
-  return `https://wa.me/?text=${encodeURIComponent(text)}`;
-}
-
-function startOfTodayInTZ(){
-  // نحصل تاريخ اليوم في TZ بصيغة YYYY-MM-DD ثم نبني Date محلي
-  const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(new Date());
-  return new Date(ymd + "T00:00:00");
-}
-
-function isSameDayTZ(iso){
-  const a = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(new Date(iso));
-  const b = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(new Date());
-  return a === b;
-}
-
-function formatCountdown(ms){
-  if (ms <= 0) return "بدأت الآن";
-  const s = Math.floor(ms/1000);
-  const days = Math.floor(s/86400);
-  const hrs  = Math.floor((s%86400)/3600);
-  const mins = Math.floor((s%3600)/60);
-  if (days > 0) return `باقي ${days} يوم و ${hrs} ساعة`;
-  if (hrs > 0)  return `باقي ${hrs} ساعة و ${mins} دقيقة`;
-  return `باقي ${mins} دقيقة`;
-}
-
-let activeFilter = "all";
-let cachedRows = [];
-let showPast = true;
-let countdownTimer = null;
-let nextMeal = null;
-
-function setMessage(kind, text){
-  $("msg").className = kind ? `notice ${kind}` : "notice";
-  $("msg").textContent = text;
-}
-
-function setFilter(f){
-  activeFilter = f;
-  document.querySelectorAll(".chip").forEach(c => c.classList.toggle("active", c.dataset.filter === f));
-  renderCards();
-}
-
-$("chips").addEventListener("click", (e)=>{
-  const btn = e.target.closest(".chip");
-  if(!btn) return;
-  setFilter(btn.dataset.filter);
-});
-
-$("togglePast").addEventListener("click", ()=>{
-  showPast = !showPast;
-  renderCards();
-});
-
-$("reload").addEventListener("click", ()=>loadMonth($("monthPick").value));
-$("monthPick").addEventListener("change", ()=>loadMonth($("monthPick").value));
-
-function pickNextUpcoming(rows){
-  const now = new Date();
-  return rows
-    .filter(r => new Date(r.starts_at) >= now)
-    .sort((a,b)=> new Date(a.starts_at) - new Date(b.starts_at))[0] || null;
-}
-
-function showNextBanner(r){
-  const box = $("nextBox");
-  if(!r){ box.style.display="none"; return; }
-
-  const g = formatGregorianDayAndDate(r.starts_at);
-  const h = formatHijriWithPrefix(r.starts_at);
-  const t = `${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}`;
-
-  box.style.display="block";
-  box.innerHTML = `
-    ⏭️ <b>أقرب مناسبة:</b> ${mealLabel(r.meal)}
-    <div style="margin-top:6px" class="small">📅 ${g}</div>
-    <div class="small">🕌 ${h}</div>
-    <div style="margin-top:6px" class="small">⏰ ${t}</div>
-    <div style="margin-top:6px"><b id="countDown">⏳ …</b></div>
-  `;
-}
-
-function runCountdown(){
-  if(!nextMeal){
-    if(countdownTimer) clearInterval(countdownTimer);
-    countdownTimer = null;
-    return;
-  }
-  const el = document.getElementById("countDown");
-  if(!el) return;
-
-  const update = ()=>{
-    const ms = new Date(nextMeal.starts_at) - new Date();
-    el.textContent = `⏳ ${formatCountdown(ms)}`;
-  };
-
-  update();
-  if(countdownTimer) clearInterval(countdownTimer);
-  countdownTimer = setInterval(update, 30000); // تحديث كل 30 ثانية
-}
-
-function renderCards(){
-  const now = new Date();
-
-  let rows = cachedRows.slice();
-
-  // فلاتر إضافية
-  if (activeFilter === "upcoming") rows = rows.filter(r => new Date(r.starts_at) >= now);
-  else if (activeFilter === "past") rows = rows.filter(r => new Date(r.starts_at) < now);
-  else if (activeFilter !== "all") rows = rows.filter(r => r.meal === activeFilter);
-
-  if(!rows.length){
-    $("list").innerHTML = `<div class="notice">لا توجد مناسبات ضمن هذا الفلتر.</div>`;
-    return;
-  }
-
-  // ترتيب: اليوم أولاً، ثم القادمة، ثم المنتهية
-  rows.sort((a,b)=>{
-    const aToday = isSameDayTZ(a.starts_at) ? 0 : 1;
-    const bToday = isSameDayTZ(b.starts_at) ? 0 : 1;
-    if (aToday !== bToday) return aToday - bToday;
-
-    const aPast = new Date(a.starts_at) < now ? 1 : 0;
-    const bPast = new Date(b.starts_at) < now ? 1 : 0;
-    if (aPast !== bPast) return aPast - bPast;
-
-    return new Date(a.starts_at) - new Date(b.starts_at);
-  });
-
-  const wrap = document.createElement("div");
-  wrap.className = "cardsGrid";
-
-  for(const r of rows){
-    const isPast = new Date(r.starts_at) < now;
-    const isToday = isSameDayTZ(r.starts_at);
-    const isNext = nextMeal && r.id === nextMeal.id;
-
-    if(isPast && !showPast && activeFilter !== "past") continue;
-
-    const hostNames = (r._hostNames || []);
-    const hostsText = hostNames.length ? hostNames.join(" – ") : "—";
-
-    const g = formatGregorianDayAndDate(r.starts_at);
-    const h = formatHijriWithPrefix(r.starts_at);
-    const t = `${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}`;
-
-    const title = `${APP_TITLE} — ${mealLabel(r.meal)}`;
-    const desc =
-`${mealLabel(r.meal)}
-${g}
-${h}
-⏰ ${t}
-الداعين: ${hostsText}
-${r.notes ? ("ملاحظة: " + r.notes) : ""}`.trim();
-
-    const startD = new Date(r.starts_at);
-    const endD = new Date(r.ends_at);
-
-    const card = document.createElement("div");
-    card.className = "card mealCard mealCardPro";
-    card.dataset.meal = r.meal;
-
-    // تحسين بصري: اليوم / القادمة / الماضية
-    if (isToday){
-      card.style.border = "1px solid rgba(245,158,11,.45)";
-      card.style.background = "rgba(245,158,11,.06)";
-    } else if (isNext){
-      card.style.border = "1px solid rgba(34,197,94,.45)";
-      card.style.background = "rgba(34,197,94,.06)";
-    }
-
-    if (isPast){
-      card.style.opacity = "0.45";
-      card.style.filter = "grayscale(.2)";
-    }
-
-    const top = document.createElement("div");
-    top.className = "mealTopPro";
-
-    const left = document.createElement("div");
-
-    const tag = isToday ? "📍 اليوم" : (isNext ? "⏭️ الأقرب" : "");
-    const tagHtml = tag ? `<div class="badge" style="margin-top:8px;display:inline-flex">${tag}</div>` : "";
-
-    left.innerHTML = `
-      <div class="mealBadge">🍽️ ${mealLabel(r.meal)}</div>
-      <div style="height:8px"></div>
-      <div class="mealMeta">
-        <div><b style="color:#0f172a">📅 ${g}</b></div>
-        <div>🕌 ${h}</div>
-        <div>⏰ ${t}</div>
-      </div>
-      ${tagHtml}
-    `;
-
-    const actions = document.createElement("div");
-    actions.style.display="flex";
-    actions.style.flexDirection="column";
-    actions.style.gap="8px";
-    actions.style.minWidth="160px";
-
-    const btnIcs = document.createElement("button");
-    btnIcs.className = "btn secondary primaryAction";
-    btnIcs.textContent = "📅 أضف للتقويم";
-    btnIcs.disabled = false;
-    btnIcs.addEventListener("click", ()=>{
-      const ics = makeIcs({
-        title,
-        description: desc,
-        location: DEFAULT_LOCATION,
-        start: startD,
-        end: endD
-      });
-      const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(new Date(r.starts_at));
-      downloadIcs(ics, `${APP_TITLE}-${mealLabel(r.meal)}-${ymd}.ics`);
-    });
-
-    const btnWa = document.createElement("button");
-    btnWa.className = "btn";
-    btnWa.textContent = "📤 مشاركة واتساب";
-    btnWa.style.background = "#25D366";
-    btnWa.addEventListener("click", ()=>{
-      const text =
-`🍽️ ${mealLabel(r.meal)}
-📅 ${g}
-🕌 ${h}
-⏰ ${t}
-📍 ${DEFAULT_LOCATION}
-👥 الداعين: ${hostsText}
-${r.notes ? ("📝 " + r.notes + "\n") : ""}\n${location.href}`;
-      window.open(waShare(text), "_blank");
-    });
-
-    actions.appendChild(btnIcs);
-    actions.appendChild(btnWa);
-
-    top.appendChild(left);
-    top.appendChild(actions);
-
-    const hosts = document.createElement("div");
-    hosts.className = "hostsBlock";
-    hosts.innerHTML = `
-      <div class="hostsTitle">الداعين</div>
-      <div class="hostsNames">${hostsText}</div>
-      ${r.notes ? `<div class="small" style="margin-top:8px">ملاحظة: ${r.notes}</div>` : ``}
-    `;
-
-    card.appendChild(top);
-    card.appendChild(hosts);
-
-    wrap.appendChild(card);
-  }
-
-  $("list").innerHTML = "";
-  $("list").appendChild(wrap);
-}
-
-async function loadMonth(m){
-  $("pageTitle").textContent = APP_TITLE;
-  $("loc").textContent = DEFAULT_LOCATION;
-
-  $("monthPick").value = m;
-  $("monthBadge").textContent = monthLabel(m);
-
-  setMessage("", "جارٍ تحميل الجدول…");
-  $("list").textContent = "—";
-
-  const start = `${m}-01T00:00:00+03:00`;
-  const [yy, mm] = m.split("-").map(Number);
-  const endDate = new Date(Date.UTC(yy, mm, 1, 0, 0, 0));
-  const end = `${endDate.getUTCFullYear()}-${pad2(endDate.getUTCMonth()+1)}-${pad2(endDate.getUTCDate())}T00:00:00+03:00`;
-
-  const { data: meals, error: e1 } = await supabase
-    .from("meals")
-    .select("id, meal, starts_at, ends_at, notes")
-    .gte("starts_at", start)
-    .lt("starts_at", end)
-    .order("starts_at", { ascending:true });
-
-  if(e1){
-    setMessage("warn", `تعذر تحميل البيانات: ${e1.message}`);
-    $("list").textContent="—";
-    $("nextBox").style.display="none";
-    nextMeal = null;
-    runCountdown();
-    return;
-  }
-
-  const rows = meals || [];
-  if(!rows.length){
-    setMessage("", "لا توجد بيانات لهذا الشهر حتى الآن.");
-    $("list").innerHTML = `<div class="notice">لا توجد مناسبات.</div>`;
-    $("nextBox").style.display="none";
-    cachedRows = [];
-    nextMeal = null;
-    runCountdown();
-    return;
-  }
-
-  // hosts
-  const mealIds = rows.map(r=>r.id);
-  const { data: links } = await supabase
-    .from("meal_hosts")
-    .select("meal_id, member_id")
-    .in("meal_id", mealIds);
-
-  const memberIds = [...new Set((links||[]).map(x=>x.member_id))];
-  const membersMap = new Map();
-
-  if(memberIds.length){
-    const { data: mems } = await supabase
-      .from("members")
-      .select("id, full_name")
-      .in("id", memberIds);
-    (mems||[]).forEach(m=>membersMap.set(m.id, m.full_name));
-  }
-
-  const hostsByMeal = new Map();
-  (links||[]).forEach(l=>{
-    if(!hostsByMeal.has(l.meal_id)) hostsByMeal.set(l.meal_id, []);
-    hostsByMeal.get(l.meal_id).push(membersMap.get(l.member_id) || "—");
-  });
-
-  rows.forEach(r => {
-    r._hostNames = (hostsByMeal.get(r.id) || []).filter(Boolean);
-  });
-
-  cachedRows = rows;
-  setMessage("ok", "تم تحميل الجدول.");
-
-  nextMeal = pickNextUpcoming(rows);
-  showNextBanner(nextMeal);
-  runCountdown();
-  renderCards();
-}
-
-// init
-$("loc").textContent = DEFAULT_LOCATION;
-const initialMonth = getMonthParam();
-$("monthPick").value = initialMonth;
-$("monthBadge").textContent = monthLabel(initialMonth);
-
-loadMonth(initialMonth);
-</script>
-</body>
-</html>
-function makeIcs({ title, description, location, start, end }){
-  const dt = (d)=>{
-    const y=d.getUTCFullYear(),mo=pad2(d.getUTCMonth()+1),da=pad2(d.getUTCDate());
-    const hh=pad2(d.getUTCHours()),mm=pad2(d.getUTCMinutes()),ss=pad2(d.getUTCSeconds());
-    return `${y}${mo}${da}T${hh}${mm}${ss}Z`;
-  };
-  const uid = crypto.randomUUID()+"@dawriya";
-  return [
-    "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Dawriya//AR//",
-    "BEGIN:VEVENT",
-    `UID:${uid}`,
-    `DTSTAMP:${dt(new Date())}`,
-    `DTSTART:${dt(start)}`,
-    `DTEND:${dt(end)}`,
-    `SUMMARY:${title}`,
-    `DESCRIPTION:${description}`,
-    `LOCATION:${location}`,
-    "END:VEVENT","END:VCALENDAR"
-  ].join("\r\n");
-}
-
-function downloadIcs(text,name){
-  const blob=new Blob([text],{type:"text/calendar"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download=name;
-  a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+function countdownText(target){
+  const diff = new Date(target) - new Date();
+  if(diff<=0) return "بدأت الآن";
+  const minutes = Math.floor(diff/60000);
+  const hours = Math.floor(minutes/60);
+  const days = Math.floor(hours/24);
+  if(days>0) return "باقي "+days+" يوم";
+  if(hours>0) return "باقي "+hours+" ساعة";
+  return "باقي "+minutes+" دقيقة";
 }
 
 async function load(){
-  const { data, error } = await supabase
-    .from("meals")
-    .select("id,meal,starts_at,ends_at,notes")
-    .order("starts_at",{ascending:true});
+
+  const {data, error} = await supabase
+  .from("meals")
+  .select("*")
+  .order("starts_at",{ascending:true});
 
   if(error){
-    $("msg").className="notice warn";
-    $("msg").textContent="خطأ: "+error.message;
+    list.innerHTML="خطأ: "+error.message;
     return;
   }
 
   if(!data.length){
-    $("msg").textContent="لا توجد مناسبات حالياً.";
+    list.innerHTML="لا توجد مناسبات";
     return;
   }
 
-  $("msg").className="notice ok";
-  $("msg").textContent="تم تحميل الجدول.";
+  const now = new Date();
+  const upcoming = data.filter(x=>new Date(x.starts_at)>=now)[0];
 
-  const wrap=document.createElement("div");
-  wrap.className="cardsGrid";
-
-  for(const r of data){
-    const g=formatGregorian(r.starts_at);
-    const h=formatHijri(r.starts_at);
-    const t=`${formatTime(r.starts_at)} – ${formatTime(r.ends_at)}`;
-
-    const title=`${APP_TITLE} — ${mealLabel(r.meal)}`;
-    const desc=`${mealLabel(r.meal)}\n${g}\n${h}\n${t}\nالموقع: ${DEFAULT_LOCATION}`;
-
-    const card=document.createElement("div");
-    card.className="card mealCard mealCardPro";
-    card.dataset.meal=r.meal;
-
-    const top=document.createElement("div");
-    top.className="mealTopPro";
-
-    const left=document.createElement("div");
-    left.innerHTML=`
-      <div class="mealBadge">🍽️ ${mealLabel(r.meal)}</div>
-      <div style="height:8px"></div>
-      <div class="mealMeta">
-        <div><b>📅 ${g}</b></div>
-        <div>🕌 ${h}</div>
-        <div>⏰ ${t}</div>
-      </div>
-    `;
-
-    const actions=document.createElement("div");
-    actions.style.display="flex";
-    actions.style.flexDirection="column";
-    actions.style.gap="8px";
-
-    const btnIcs=document.createElement("button");
-    btnIcs.className="btn secondary primaryAction";
-    btnIcs.textContent="📅 أضف للتقويم";
-    btnIcs.onclick=()=>{
-      const ics=makeIcs({
-        title,
-        description:desc,
-        location:DEFAULT_LOCATION,
-        start:new Date(r.starts_at),
-        end:new Date(r.ends_at)
-      });
-      downloadIcs(ics,"dawriya.ics");
-    };
-
-    const btnWa=document.createElement("button");
-    btnWa.className="btn";
-    btnWa.style.background="#25D366";
-    btnWa.textContent="📤 مشاركة واتساب";
-    btnWa.onclick=()=>{
-      const text=`🍽️ ${mealLabel(r.meal)}\n📅 ${g}\n🕌 ${h}\n⏰ ${t}\n📍 ${DEFAULT_LOCATION}\n\n${location.href}`;
-      const url=`https://wa.me/?text=${encodeURIComponent(text)}`;
-      window.open(url,"_blank");
-    };
-
-    actions.appendChild(btnIcs);
-    actions.appendChild(btnWa);
-
-    top.appendChild(left);
-    top.appendChild(actions);
-    card.appendChild(top);
-
-    wrap.appendChild(card);
+  if(upcoming){
+    nextBox.style.display="block";
+    nextBox.innerHTML="⏭️ أقرب مناسبة: "
+    + upcoming.meal
+    + "<br>"
+    + formatDate(upcoming.starts_at)
+    + "<br><b>"
+    + countdownText(upcoming.starts_at)
+    + "</b>";
   }
 
-  $("list").innerHTML="";
-  $("list").appendChild(wrap);
+  list.innerHTML="";
+
+  data.forEach(r=>{
+    const card=document.createElement("div");
+    card.className="card";
+    card.style.marginBottom="15px";
+
+    if(new Date(r.starts_at)<now){
+      card.style.opacity="0.4";
+    }
+
+    if(isToday(r.starts_at)){
+      card.style.border="2px solid orange";
+    }
+
+    card.innerHTML=
+    "<b>"+r.meal+"</b><br>"
+    + formatDate(r.starts_at);
+
+    list.appendChild(card);
+  });
+
 }
 
 load();
+
 </script>
+
 </body>
 </html>
