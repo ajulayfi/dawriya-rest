@@ -33,12 +33,10 @@
     .tabPanel{display:none}
     .tabPanel.active{display:block}
 
-    /* جوال: نخلي التبويب ياخذ عرض مناسب */
     @media (max-width:520px){
       .tabBtn{flex:1 1 auto; text-align:center}
     }
 
-    /* تحسينات بسيطة */
     .kpis{display:grid;gap:10px;grid-template-columns:repeat(4,minmax(0,1fr))}
     @media (max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
     .kpi{padding:12px;border:1px solid var(--line);border-radius:16px;background:#fff}
@@ -72,7 +70,6 @@
 
   <div id="status" class="notice">جارٍ التحقق…</div>
 
-  <!-- Tabs -->
   <div class="tabsBar" role="tablist" aria-label="Admin Tabs">
     <button class="tabBtn active" data-tab="tabSchedule">📅 الجدولة</button>
     <button class="tabBtn" data-tab="tabMonth">🗓️ جدول الشهر</button>
@@ -212,7 +209,7 @@
       <div class="hr"></div>
 
       <div class="notice">
-        الفكرة: بعد ما تخلص جدولة الشهر، اضغط زر الإشعار وارسله في القروب.
+        بعد ما تخلص جدولة الشهر، اضغط زر الإشعار وارسله في القروب.
       </div>
 
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px">
@@ -246,10 +243,8 @@
   function openTab(id){
     tabBtns.forEach(b => b.classList.toggle("active", b.dataset.tab === id));
     panels.forEach(p => p.classList.toggle("active", p.id === id));
-    // رفع لعنوان التبويب على الجوال
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
-
   tabBtns.forEach(b => b.addEventListener("click", ()=> openTab(b.dataset.tab)));
 
   function toast(kind, text){
@@ -494,8 +489,11 @@
     const endTime = endTimeEl.value || "00:00";
     if (!date) return alert("اختر التاريخ.");
 
-    const startsAt = date + "T" + startTime + ":00+03:00";
-    const endsAt = computeEndISO(date, startTime, endTime);
+    // ✅ FIX: computeEndISO يرجع Object
+    const t = computeEndISO(date, startTime, endTime);
+    const startsAt = t.startISO;
+    const endsAt = t.endISO;
+
     const notes = (notesEl.value || "").trim() || null;
 
     toast("", "جارٍ الحفظ…");
@@ -608,7 +606,7 @@
       await updateDuplicateWarning();
 
       editNote.textContent = "وضع التعديل: احفظ لتحديث الموعد.";
-      openTab("tabSchedule"); // ✅ يرجع لجدولة مباشرة
+      openTab("tabSchedule");
     };
 
     monthTableWrap.innerHTML = "";
@@ -692,7 +690,6 @@
     location.href = "./login.html";
   });
 
-  // Members events
   addMemberBtn.addEventListener("click", async () => {
     const name = (newMemberEl.value || "").trim();
     if (!name) return;
@@ -705,7 +702,6 @@
   memberSearch.addEventListener("input", renderMembers);
   showInactive.addEventListener("change", renderMembers);
 
-  // Schedule events
   resetFormBtn.addEventListener("click", resetForm);
   saveMealBtn.addEventListener("click", saveMeal);
   deleteMealBtn.addEventListener("click", deleteMeal);
@@ -715,11 +711,9 @@
   endTimeEl.addEventListener("change", updateDuplicateWarning);
   mealTypeEl.addEventListener("change", updateDuplicateWarning);
 
-  // Month tab events
   reloadMonthBtn.addEventListener("click", loadMonthTable);
   monthPick.addEventListener("change", loadMonthTable);
 
-  // Publish tab events
   waPublishBtn.addEventListener("click", publishWhatsApp);
   copyLinkBtn.addEventListener("click", copyMonthLink);
 
@@ -728,7 +722,10 @@
     if (!user) return;
 
     const today = new Date();
-    dateEl.value = today.getFullYear() + "-" + String(today.getMonth()+1).padStart(2,"0") + "-" + String(today.getDate()).padStart(2,"0");
+    const y = today.getFullYear();
+    const m = String(today.getMonth()+1).padStart(2,"0");
+    const d = String(today.getDate()).padStart(2,"0");
+    dateEl.value = y + "-" + m + "-" + d;
     renderHijriPreview();
 
     const month = getMonthParam();
