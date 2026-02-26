@@ -312,7 +312,8 @@
   const membersList = document.getElementById("membersList");
 
   let members = [];
-  let selectedHostIds = new Set();
+  let membersById = new Map();            // ✅ FIX: Map للتطابق السريع + بدون مشاكل type
+  let selectedHostIds = new Set();        // ✅ FIX: نخزن IDs كـ String
   let editingMealId = null;
   let cachedMonthMeals = [];
 
@@ -338,9 +339,16 @@
     if (error){
       membersList.textContent = error.message;
       hostsPicker.textContent = "—";
+      members = [];
+      membersById = new Map();
       return;
     }
+
     members = data || [];
+
+    // ✅ FIX: طبّع المفاتيح دائمًا إلى String
+    membersById = new Map((members || []).map(m => [String(m.id), m.full_name]));
+
     renderMembers();
     renderHostsPicker();
     updateKPIs();
@@ -387,7 +395,9 @@
 
     const wrap = el("div", { style:"display:flex;flex-wrap:wrap;gap:10px" }, []);
     active.forEach(m => {
-      const checked = selectedHostIds.has(m.id);
+      const mid = String(m.id); // ✅ FIX
+      const checked = selectedHostIds.has(mid);
+
       const chip = el("label", {
         class: "chip",
         style: "cursor:pointer;display:inline-flex;align-items:center;gap:8px"
@@ -396,12 +406,15 @@
           type:"checkbox",
           checked,
           onchange: (e) => {
-            if (e.target.checked) selectedHostIds.add(m.id);
-            else selectedHostIds.delete(m.id);
+            if (e.target.checked) selectedHostIds.add(mid);
+            else selectedHostIds.delete(mid);
+            // دقة إضافية: تحدث التنبيه فور التعديل
+            updateDuplicateWarning();
           }
         }),
         m.full_name
       ]);
+
       wrap.appendChild(chip);
     });
 
@@ -438,7 +451,7 @@
     editingMealId = null;
     deleteMealBtn.style.display = "none";
     notesEl.value = "";
-    selectedHostIds = new Set();
+    selectedHostIds = new Set(); // ✅ يظل String
     renderHostsPicker();
     editNote.textContent = "";
     dupWarn.style.display = "none";
@@ -460,7 +473,7 @@
       String(endDate.getUTCMonth()+1).padStart(2,"0") + "-" +
       String(endDate.getUTCDate()).padStart(2,"0") + "T00:00:00+03:00";
 
-    const hostIds = Array.from(selectedHostIds);
+    const hostIds = Array.from(selectedHostIds); // ✅ Strings
     if (!hostIds.length) return;
 
     const { data, error } = await supabase
@@ -474,10 +487,10 @@
     const clashes = [];
     (data||[]).forEach(r=>{
       if (editingMealId && r.id === editingMealId) return;
-      const ids = (r.meal_hosts||[]).map(x=>x.member_id);
+      const ids = (r.meal_hosts||[]).map(x=>String(x.member_id)); // ✅ FIX
       const overlap = hostIds.filter(id=>ids.includes(id));
       if (overlap.length){
-        const names = overlap.map(id => members.find(m=>m.id===id)?.full_name).filter(Boolean);
+        const names = overlap.map(id => membersById.get(id)).filter(Boolean);
         if (names.length) clashes.push({ when: r.starts_at, names });
       }
     });
@@ -523,7 +536,12 @@
 
     await supabase.from("meal_hosts").delete().eq("meal_id", mealId);
 
-    const hostRows = Array.from(selectedHostIds).map(member_id => ({ meal_id: mealId, member_id }));
+    // ✅ FIX: selectedHostIds strings -> نخزن بالقاعدة كرقم إذا كان member_id integer
+    const hostRows = Array.from(selectedHostIds).map(member_id => ({
+      meal_id: mealId,
+      member_id: Number(member_id)
+    }));
+
     if (hostRows.length){
       const { error } = await supabase.from("meal_hosts").insert(hostRows);
       if (error){ toast("warn", error.message); return; }
@@ -580,9 +598,10 @@
     cachedMonthMeals = meals || [];
     updateKPIs();
 
+    // ✅ FIX: استخراج أسماء الداعين عن طريق Map وتطبيع member_id
     const hostNamesOf = (r) => {
-      const ids = (r.meal_hosts || []).map(x => x.member_id);
-      return ids.map(id => members.find(m => m.id === id)?.full_name).filter(Boolean);
+      const ids = (r.meal_hosts || []).map(x => String(x.member_id));
+      return ids.map(id => membersById.get(id)).filter(Boolean);
     };
 
     const onEdit = async (r) => {
@@ -610,8 +629,11 @@
       endTimeEl.value = timeE;
 
       notesEl.value = r.notes || "";
-      const ids = (r.meal_hosts || []).map(x => x.member_id);
+
+      // ✅ FIX: نخزن Set كـ Strings
+      const ids = (r.meal_hosts || []).map(x => String(x.member_id));
       selectedHostIds = new Set(ids);
+
       renderHostsPicker();
       renderHijriPreview();
       await updateDuplicateWarning();
@@ -705,8 +727,10 @@
   addMemberBtn.addEventListener("click", async () => {
     const name = (newMemberEl.value || "").trim();
     if (!name) return;
+
     const { error } = await supabase.from("members").insert({ full_name: name, is_active: true });
     if (error) return alert(error.message);
+
     newMemberEl.value = "";
     await loadMembers();
   });
@@ -761,8 +785,8 @@
     monthPick.value = month;
     monthLabelTop.textContent = monthLabel(month);
 
-    await loadMembers();
-    await loadMonthTable();
+    await loadMembers();       // ✅ مهم: Map يجهز هنا
+    await loadMonthTable();    // ✅ بعدها نعرض جدول الشهر مع أسماء الداعين
     resetForm();
 
     const initTab = pickInitialTab();
