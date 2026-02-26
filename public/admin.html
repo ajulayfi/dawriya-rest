@@ -11,7 +11,7 @@
     .tabsBar{
       display:flex; gap:10px; flex-wrap:wrap;
       border:1px solid var(--line,#e5e7eb);
-      background:rgba(255,255,255,.8);
+      background:rgba(255,255,255,.85);
       border-radius:16px;
       padding:10px;
       position:sticky; top:10px; z-index:20;
@@ -71,14 +71,14 @@
   <div id="status" class="notice">جارٍ التحقق…</div>
 
   <div class="tabsBar" role="tablist" aria-label="Admin Tabs">
-    <button class="tabBtn active" data-tab="tabSchedule">📅 الجدولة</button>
+    <button class="tabBtn" data-tab="tabSchedule">📅 الجدولة</button>
     <button class="tabBtn" data-tab="tabMonth">🗓️ جدول الشهر</button>
     <button class="tabBtn" data-tab="tabMembers">👥 الأعضاء</button>
     <button class="tabBtn" data-tab="tabPublish">📢 النشر</button>
   </div>
 
   <!-- TAB: Schedule -->
-  <section id="tabSchedule" class="tabPanel active">
+  <section id="tabSchedule" class="tabPanel">
     <div class="card" style="margin-top:12px">
       <div style="font-weight:800">إضافة / تعديل مناسبة</div>
       <div class="small">التاريخ + (من → إلى) يدعم عبور منتصف الليل.</div>
@@ -240,12 +240,17 @@
   const tabBtns = Array.from(document.querySelectorAll(".tabBtn"));
   const panels = Array.from(document.querySelectorAll(".tabPanel"));
 
-  function openTab(id){
+  function openTab(id, { save=true, scroll=true } = {}){
     tabBtns.forEach(b => b.classList.toggle("active", b.dataset.tab === id));
     panels.forEach(p => p.classList.toggle("active", p.id === id));
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (save) localStorage.setItem("admin_last_tab", id);
+    if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
   }
-  tabBtns.forEach(b => b.addEventListener("click", ()=> openTab(b.dataset.tab)));
+
+  tabBtns.forEach(b => b.addEventListener("click", ()=> {
+    location.hash = b.dataset.tab; // ✅ يخلي الرابط يفتح نفس التبويب
+    openTab(b.dataset.tab);
+  }));
 
   function toast(kind, text){
     statusEl.className = kind ? ("notice " + kind) : "notice";
@@ -308,11 +313,8 @@
   function renderHijriPreview(){
     if (!dateEl.value){ hijriPreview.textContent = "—"; return; }
     const iso = dateEl.value + "T12:00:00+03:00";
-    try{
-      hijriPreview.textContent = "الموافق " + formatHijriUmmAlQura(iso);
-    }catch{
-      hijriPreview.textContent = "—";
-    }
+    try{ hijriPreview.textContent = "الموافق " + formatHijriUmmAlQura(iso); }
+    catch{ hijriPreview.textContent = "—"; }
   }
 
   function buildMonthLink(month){
@@ -489,13 +491,12 @@
     const endTime = endTimeEl.value || "00:00";
     if (!date) return alert("اختر التاريخ.");
 
-    // ✅ FIX: computeEndISO يرجع Object
+    // ✅ computeEndISO يرجع Object
     const t = computeEndISO(date, startTime, endTime);
     const startsAt = t.startISO;
     const endsAt = t.endISO;
 
     const notes = (notesEl.value || "").trim() || null;
-
     toast("", "جارٍ الحفظ…");
 
     let mealId = editingMealId;
@@ -606,6 +607,7 @@
       await updateDuplicateWarning();
 
       editNote.textContent = "وضع التعديل: احفظ لتحديث الموعد.";
+      location.hash = "tabSchedule";
       openTab("tabSchedule");
     };
 
@@ -663,6 +665,7 @@
 
       table.appendChild(tbody);
       monthTableWrap.appendChild(table);
+      monthTableWrap.appendChild(table);
     }
   }
 
@@ -717,6 +720,24 @@
   waPublishBtn.addEventListener("click", publishWhatsApp);
   copyLinkBtn.addEventListener("click", copyMonthLink);
 
+  function pickInitialTab(){
+    const hash = (location.hash || "").replace("#","");
+    const allowed = new Set(["tabSchedule","tabMonth","tabMembers","tabPublish"]);
+
+    if (allowed.has(hash)) return hash;
+
+    const saved = localStorage.getItem("admin_last_tab");
+    if (allowed.has(saved)) return saved;
+
+    return "tabSchedule"; // ✅ الافتراضي
+  }
+
+  window.addEventListener("hashchange", () => {
+    const hash = (location.hash || "").replace("#","");
+    const allowed = new Set(["tabSchedule","tabMonth","tabMembers","tabPublish"]);
+    if (allowed.has(hash)) openTab(hash, { save:true, scroll:false });
+  });
+
   (async () => {
     const user = await requireAdmin();
     if (!user) return;
@@ -735,6 +756,10 @@
     await loadMembers();
     await loadMonthTable();
     resetForm();
+
+    const initTab = pickInitialTab();
+    location.hash = initTab;   // ✅ يخلي الرابط يعكس التبويب
+    openTab(initTab, { save:true, scroll:false });
 
     toast("ok", "جاهز ✅");
   })();
