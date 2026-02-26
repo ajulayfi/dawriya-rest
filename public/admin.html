@@ -6,32 +6,63 @@
   <title>لوحة الإدارة</title>
   <link rel="stylesheet" href="./assets/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
-    /* تحسينات جوال خفيفة بدون كسر CSS الأساسي */
+    .tabsBar{
+      display:flex; gap:10px; flex-wrap:wrap;
+      border:1px solid var(--line,#e5e7eb);
+      background:rgba(255,255,255,.8);
+      border-radius:16px;
+      padding:10px;
+      position:sticky; top:10px; z-index:20;
+      backdrop-filter: blur(10px);
+    }
+    .tabBtn{
+      border:1px solid var(--line,#e5e7eb);
+      background:#fff;
+      border-radius:999px;
+      padding:10px 14px;
+      font-weight:800;
+      cursor:pointer;
+      color:#0f172a;
+    }
+    .tabBtn.active{
+      border-color: rgba(59,130,246,.35);
+      background: rgba(59,130,246,.08);
+    }
+    .tabPanel{display:none}
+    .tabPanel.active{display:block}
+
+    /* جوال: نخلي التبويب ياخذ عرض مناسب */
+    @media (max-width:520px){
+      .tabBtn{flex:1 1 auto; text-align:center}
+    }
+
+    /* تحسينات بسيطة */
     .kpis{display:grid;gap:10px;grid-template-columns:repeat(4,minmax(0,1fr))}
     @media (max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    .kpi{padding:12px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#fff,rgba(255,255,255,.92))}
+    .kpi{padding:12px;border:1px solid var(--line);border-radius:16px;background:#fff}
     .kpi b{font-size:18px}
-    .kpi .small{margin-top:2px}
+    .pill{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:6px 10px;border-radius:999px;border:1px solid var(--line);
+      background:#fff;font-size:12px;color:var(--muted)
+    }
     .memberRow{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px dashed var(--line)}
-    .memberName{font-weight:700}
-    .memberMeta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px}
-    .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:12px;color:var(--muted)}
-    .muted{color:var(--muted)}
+    .memberName{font-weight:800}
     .monthCards{display:grid;gap:10px}
     .monthCard{border:1px solid var(--line);border-radius:16px;background:#fff;padding:12px;cursor:pointer}
-    .monthCard:hover{box-shadow:0 12px 30px rgba(0,0,0,.06)}
     .monthTop{display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap;align-items:flex-start}
-    .monthTop .badge{white-space:nowrap}
-    .monthCard .small{line-height:1.55}
   </style>
 </head>
+
 <body>
 <div class="container">
+
   <div class="header">
     <div class="title">
       <h1>لوحة الإدارة</h1>
-      <div class="sub">إدارة الأعضاء + جدولة شهرية + إشعار واتساب</div>
+      <div class="sub">مقسمة بتبويبات لسهولة الاستخدام على الجوال</div>
     </div>
     <div class="toolbar">
       <span id="who" class="badge">—</span>
@@ -41,142 +72,157 @@
 
   <div id="status" class="notice">جارٍ التحقق…</div>
 
-  <!-- ملخص سريع -->
-  <div class="card" style="margin-top:12px">
-    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
-      <div>
-        <div style="font-weight:700">ملخص سريع</div>
-        <div class="small">يعطيك صورة سريعة قبل الجدولة.</div>
-      </div>
-      <span id="monthLabelTop" class="badge">—</span>
-    </div>
-    <div class="hr"></div>
-
-    <div class="kpis">
-      <div class="kpi">
-        <div class="small">الأعضاء (مفعّل)</div>
-        <b id="kpiActiveMembers">—</b>
-      </div>
-      <div class="kpi">
-        <div class="small">الأعضاء (الإجمالي)</div>
-        <b id="kpiTotalMembers">—</b>
-      </div>
-      <div class="kpi">
-        <div class="small">مناسبات هذا الشهر</div>
-        <b id="kpiMonthMeals">—</b>
-      </div>
-      <div class="kpi">
-        <div class="small">القادمة</div>
-        <b id="kpiUpcoming">—</b>
-      </div>
-    </div>
-
-    <div id="kpiNext" class="notice ok" style="margin-top:10px;display:none"></div>
+  <!-- Tabs -->
+  <div class="tabsBar" role="tablist" aria-label="Admin Tabs">
+    <button class="tabBtn active" data-tab="tabSchedule">📅 الجدولة</button>
+    <button class="tabBtn" data-tab="tabMonth">🗓️ جدول الشهر</button>
+    <button class="tabBtn" data-tab="tabMembers">👥 الأعضاء</button>
+    <button class="tabBtn" data-tab="tabPublish">📢 النشر</button>
   </div>
 
-  <div class="row" style="margin-top:12px">
-    <!-- الأعضاء -->
-    <div class="col">
-      <div class="card">
-        <div style="font-weight:700">الأعضاء</div>
-        <div class="small">أضف/عطّل أعضاء — مع بحث سريع</div>
+  <!-- TAB: Schedule -->
+  <section id="tabSchedule" class="tabPanel active">
+    <div class="card" style="margin-top:12px">
+      <div style="font-weight:800">إضافة / تعديل مناسبة</div>
+      <div class="small">التاريخ + (من → إلى) يدعم عبور منتصف الليل.</div>
 
-        <label>إضافة عضو</label>
+      <div class="grid2" style="margin-top:10px">
+        <div>
+          <label>النوع</label>
+          <select id="mealType" class="input">
+            <option value="futoor">فطور</option>
+            <option value="ghada">غدا</option>
+            <option value="asha">عشا</option>
+            <option value="suhoor">سحور</option>
+          </select>
+        </div>
+
+        <div>
+          <label>التاريخ (ميلادي)</label>
+          <input id="date" class="input" type="date"/>
+          <div id="hijriPreview" class="small" style="margin-top:6px;color:var(--muted)">—</div>
+        </div>
+
+        <div>
+          <label>من</label>
+          <input id="startTime" class="input" type="time" value="19:00"/>
+        </div>
+
+        <div>
+          <label>إلى</label>
+          <input id="endTime" class="input" type="time" value="00:00"/>
+        </div>
+      </div>
+
+      <label>ملاحظات (اختياري)</label>
+      <textarea id="notes" class="input" rows="2" placeholder="مثال: كل واحد يجيب شيء..."></textarea>
+
+      <div id="dupWarn" class="notice warn" style="display:none;margin-top:10px"></div>
+
+      <div class="hr"></div>
+      <div style="font-weight:800;margin:6px 0">الداعين</div>
+      <div id="hostsPicker" class="small">—</div>
+
+      <div class="hr"></div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button id="saveMeal" class="btn">حفظ</button>
+          <button id="resetForm" class="btn secondary">تفريغ</button>
+          <button id="deleteMeal" class="btn danger" style="display:none">حذف</button>
+        </div>
+        <span id="editNote" class="small"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB: Month -->
+  <section id="tabMonth" class="tabPanel">
+    <div class="card" style="margin-top:12px">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:800">ملخص الشهر</div>
+          <div class="small">إحصائيات سريعة + أقرب مناسبة</div>
+        </div>
+        <span id="monthLabelTop" class="badge">—</span>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="kpis">
+        <div class="kpi"><div class="small">الأعضاء (مفعّل)</div><b id="kpiActiveMembers">—</b></div>
+        <div class="kpi"><div class="small">الأعضاء (الإجمالي)</div><b id="kpiTotalMembers">—</b></div>
+        <div class="kpi"><div class="small">مناسبات هذا الشهر</div><b id="kpiMonthMeals">—</b></div>
+        <div class="kpi"><div class="small">القادمة</div><b id="kpiUpcoming">—</b></div>
+      </div>
+
+      <div id="kpiNext" class="notice ok" style="margin-top:10px;display:none"></div>
+
+      <div class="hr"></div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:800">جدول الشهر</div>
+          <div class="small">اضغط على بطاقة للتعديل (يرجعك لتبويب الجدولة)</div>
+        </div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <input id="newMember" class="input" placeholder="اسم العضو" style="flex:1 1 220px"/>
-          <button id="addMember" class="btn">إضافة</button>
+          <input id="monthPick" class="input" type="month"/>
+          <button id="reloadMonth" class="btn secondary">تحديث</button>
         </div>
-
-        <div class="hr"></div>
-
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <input id="memberSearch" class="input" placeholder="بحث في الأعضاء…" style="flex:1 1 220px"/>
-          <label class="pill" style="cursor:pointer">
-            <input id="showInactive" type="checkbox" style="accent-color:var(--accent);margin-inline-end:6px"/>
-            عرض الموقوفين
-          </label>
-        </div>
-
-        <div class="hr"></div>
-        <div id="membersList" class="small">—</div>
       </div>
+
+      <div class="hr"></div>
+      <div id="monthTableWrap">—</div>
     </div>
+  </section>
 
-    <!-- جدولة -->
-    <div class="col">
-      <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-          <div>
-            <div style="font-weight:700">إضافة / تعديل مناسبة</div>
-            <div class="small">التاريخ + (من → إلى) يدعم عبور منتصف الليل.</div>
-          </div>
-          <span class="badge">المكان: <b style="color:#111827">الاستراحة</b></span>
-        </div>
+  <!-- TAB: Members -->
+  <section id="tabMembers" class="tabPanel">
+    <div class="card" style="margin-top:12px">
+      <div style="font-weight:800">الأعضاء</div>
+      <div class="small">بحث سريع + تفعيل/إيقاف</div>
 
-        <div class="grid2" style="margin-top:10px">
-          <div>
-            <label>النوع</label>
-            <select id="mealType" class="input">
-              <option value="futoor">فطور</option>
-              <option value="ghada">غدا</option>
-              <option value="asha">عشا</option>
-              <option value="suhoor">سحور</option>
-            </select>
-          </div>
-          <div>
-            <label>التاريخ (ميلادي)</label>
-            <input id="date" class="input" type="date"/>
-            <div id="hijriPreview" class="small muted" style="margin-top:6px">—</div>
-          </div>
-          <div>
-            <label>من</label>
-            <input id="startTime" class="input" type="time" value="19:00"/>
-          </div>
-          <div>
-            <label>إلى</label>
-            <input id="endTime" class="input" type="time" value="00:00"/>
-          </div>
-        </div>
-
-        <label>ملاحظات (اختياري)</label>
-        <textarea id="notes" class="input" rows="2" placeholder="مثال: كل واحد يجيب شيء..."></textarea>
-
-        <div class="hr"></div>
-        <div id="dupWarn" class="notice warn" style="display:none"></div>
-
-        <div style="font-weight:700;margin:6px 0">الداعين</div>
-        <div id="hostsPicker" class="small">—</div>
-
-        <div class="hr"></div>
-
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between">
-          <div style="display:flex;gap:10px;flex-wrap:wrap">
-            <button id="saveMeal" class="btn">حفظ</button>
-            <button id="resetForm" class="btn secondary">تفريغ</button>
-            <button id="deleteMeal" class="btn danger" style="display:none">حذف</button>
-          </div>
-          <button id="waPublish" class="btn secondary">📢 إشعار واتساب (هذا الشهر)</button>
-        </div>
-
-        <div id="editNote" class="small" style="margin-top:10px"></div>
+      <label>إضافة عضو</label>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <input id="newMember" class="input" placeholder="اسم العضو" style="flex:1 1 220px"/>
+        <button id="addMember" class="btn">إضافة</button>
       </div>
+
+      <div class="hr"></div>
+
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <input id="memberSearch" class="input" placeholder="بحث في الأعضاء…" style="flex:1 1 220px"/>
+        <label class="pill" style="cursor:pointer">
+          <input id="showInactive" type="checkbox" style="accent-color:var(--accent);margin-inline-end:6px"/>
+          عرض الموقوفين
+        </label>
+      </div>
+
+      <div class="hr"></div>
+      <div id="membersList" class="small">—</div>
     </div>
-  </div>
+  </section>
 
-  <div class="card" style="margin-top:12px">
-    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
-      <div>
-        <div style="font-weight:700">جدول الشهر</div>
-        <div class="small">اضغط على بطاقة/صف للتعديل</div>
+  <!-- TAB: Publish -->
+  <section id="tabPublish" class="tabPanel">
+    <div class="card" style="margin-top:12px">
+      <div style="font-weight:800">النشر والإشعار</div>
+      <div class="small">ينشئ رسالة جاهزة واتساب فيها رابط جدول الشهر</div>
+
+      <div class="hr"></div>
+
+      <div class="notice">
+        الفكرة: بعد ما تخلص جدولة الشهر، اضغط زر الإشعار وارسله في القروب.
       </div>
-      <div class="toolbar">
-        <input id="monthPick" class="input" type="month"/>
-        <button id="reloadMonth" class="btn secondary">تحديث</button>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px">
+        <button id="waPublish" class="btn">📢 إشعار واتساب (هذا الشهر)</button>
+        <button id="copyLink" class="btn secondary">نسخ رابط الشهر</button>
       </div>
+
+      <div id="publishHint" class="small" style="margin-top:10px;color:var(--muted)"></div>
     </div>
-    <div class="hr"></div>
-    <div id="monthTableWrap">—</div>
-  </div>
+  </section>
 
 </div>
 
@@ -194,41 +240,17 @@
   const whoEl = document.getElementById("who");
   const logoutBtn = document.getElementById("logout");
 
-  const kpiActiveMembers = document.getElementById("kpiActiveMembers");
-  const kpiTotalMembers = document.getElementById("kpiTotalMembers");
-  const kpiMonthMeals = document.getElementById("kpiMonthMeals");
-  const kpiUpcoming = document.getElementById("kpiUpcoming");
-  const kpiNext = document.getElementById("kpiNext");
-  const monthLabelTop = document.getElementById("monthLabelTop");
+  const tabBtns = Array.from(document.querySelectorAll(".tabBtn"));
+  const panels = Array.from(document.querySelectorAll(".tabPanel"));
 
-  const newMemberEl = document.getElementById("newMember");
-  const addMemberBtn = document.getElementById("addMember");
-  const memberSearch = document.getElementById("memberSearch");
-  const showInactive = document.getElementById("showInactive");
-  const membersList = document.getElementById("membersList");
+  function openTab(id){
+    tabBtns.forEach(b => b.classList.toggle("active", b.dataset.tab === id));
+    panels.forEach(p => p.classList.toggle("active", p.id === id));
+    // رفع لعنوان التبويب على الجوال
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
-  const mealTypeEl = document.getElementById("mealType");
-  const dateEl = document.getElementById("date");
-  const startTimeEl = document.getElementById("startTime");
-  const endTimeEl = document.getElementById("endTime");
-  const notesEl = document.getElementById("notes");
-  const hijriPreview = document.getElementById("hijriPreview");
-  const hostsPicker = document.getElementById("hostsPicker");
-  const dupWarn = document.getElementById("dupWarn");
-
-  const saveMealBtn = document.getElementById("saveMeal");
-  const resetFormBtn = document.getElementById("resetForm");
-  const deleteMealBtn = document.getElementById("deleteMeal");
-  const editNote = document.getElementById("editNote");
-
-  const monthPick = document.getElementById("monthPick");
-  const reloadMonthBtn = document.getElementById("reloadMonth");
-  const monthTableWrap = document.getElementById("monthTableWrap");
-  const waPublishBtn = document.getElementById("waPublish");
-
-  let members = [];
-  let selectedHostIds = new Set();
-  let editingMealId = null;
+  tabBtns.forEach(b => b.addEventListener("click", ()=> openTab(b.dataset.tab)));
 
   function toast(kind, text){
     statusEl.className = kind ? ("notice " + kind) : "notice";
@@ -246,6 +268,48 @@
     return user;
   }
 
+  // Elements
+  const mealTypeEl = document.getElementById("mealType");
+  const dateEl = document.getElementById("date");
+  const startTimeEl = document.getElementById("startTime");
+  const endTimeEl = document.getElementById("endTime");
+  const notesEl = document.getElementById("notes");
+  const hijriPreview = document.getElementById("hijriPreview");
+  const hostsPicker = document.getElementById("hostsPicker");
+  const dupWarn = document.getElementById("dupWarn");
+
+  const saveMealBtn = document.getElementById("saveMeal");
+  const resetFormBtn = document.getElementById("resetForm");
+  const deleteMealBtn = document.getElementById("deleteMeal");
+  const editNote = document.getElementById("editNote");
+
+  const monthPick = document.getElementById("monthPick");
+  const reloadMonthBtn = document.getElementById("reloadMonth");
+  const monthTableWrap = document.getElementById("monthTableWrap");
+  const monthLabelTop = document.getElementById("monthLabelTop");
+
+  const kpiActiveMembers = document.getElementById("kpiActiveMembers");
+  const kpiTotalMembers = document.getElementById("kpiTotalMembers");
+  const kpiMonthMeals = document.getElementById("kpiMonthMeals");
+  const kpiUpcoming = document.getElementById("kpiUpcoming");
+  const kpiNext = document.getElementById("kpiNext");
+
+  const waPublishBtn = document.getElementById("waPublish");
+  const copyLinkBtn = document.getElementById("copyLink");
+  const publishHint = document.getElementById("publishHint");
+
+  const newMemberEl = document.getElementById("newMember");
+  const addMemberBtn = document.getElementById("addMember");
+  const memberSearch = document.getElementById("memberSearch");
+  const showInactive = document.getElementById("showInactive");
+  const membersList = document.getElementById("membersList");
+
+  // State
+  let members = [];
+  let selectedHostIds = new Set();
+  let editingMealId = null;
+  let cachedMonthMeals = [];
+
   function renderHijriPreview(){
     if (!dateEl.value){ hijriPreview.textContent = "—"; return; }
     const iso = dateEl.value + "T12:00:00+03:00";
@@ -254,6 +318,12 @@
     }catch{
       hijriPreview.textContent = "—";
     }
+  }
+
+  function buildMonthLink(month){
+    const base = new URL("./schedule.html", location.href);
+    base.searchParams.set("month", month);
+    return base.toString();
   }
 
   async function loadMembers(){
@@ -290,7 +360,7 @@
     list.forEach(m => {
       const left = el("div", {}, [
         el("div", { class:"memberName" }, [m.full_name]),
-        el("div", { class:"memberMeta" }, [
+        el("div", { style:"margin-top:6px" }, [
           el("span", { class:"pill" }, [m.is_active ? "✅ مفعّل" : "⛔️ موقوف"])
         ])
       ]);
@@ -340,10 +410,29 @@
     hostsPicker.appendChild(wrap);
   }
 
-  function buildMonthLink(month){
-    const base = new URL("./schedule.html", location.href);
-    base.searchParams.set("month", month);
-    return base.toString();
+  function updateKPIs(){
+    const total = members.length;
+    const active = members.filter(m=>m.is_active).length;
+    kpiTotalMembers.textContent = total ? String(total) : "0";
+    kpiActiveMembers.textContent = active ? String(active) : "0";
+
+    const meals = cachedMonthMeals || [];
+    kpiMonthMeals.textContent = String(meals.length);
+
+    const now = new Date();
+    const upcoming = meals.filter(r => new Date(r.starts_at) >= now);
+    kpiUpcoming.textContent = String(upcoming.length);
+
+    const next = upcoming.sort((a,b)=> new Date(a.starts_at)-new Date(b.starts_at))[0];
+    if (next){
+      kpiNext.style.display = "block";
+      kpiNext.textContent =
+        "⏭️ الأقرب: " + mealLabel(next.meal) + " — " +
+        formatGregorian(next.starts_at) + " (" +
+        formatTime12(next.starts_at) + " – " + formatTime12(next.ends_at) + ")";
+    } else {
+      kpiNext.style.display = "none";
+    }
   }
 
   async function updateDuplicateWarning(){
@@ -458,31 +547,6 @@
     await loadMonthTable();
   }
 
-  function updateKPIs(meals){
-    const total = members.length;
-    const active = members.filter(m=>m.is_active).length;
-    kpiTotalMembers.textContent = total ? String(total) : "0";
-    kpiActiveMembers.textContent = active ? String(active) : "0";
-
-    if (!meals) return;
-
-    const now = new Date();
-    const upcoming = meals.filter(r => new Date(r.starts_at) >= now);
-    kpiMonthMeals.textContent = String(meals.length);
-    kpiUpcoming.textContent = String(upcoming.length);
-
-    const next = upcoming.sort((a,b)=> new Date(a.starts_at)-new Date(b.starts_at))[0];
-    if (next){
-      kpiNext.style.display = "block";
-      kpiNext.textContent =
-        "⏭️ الأقرب: " + mealLabel(next.meal) + " — " +
-        formatGregorian(next.starts_at) + " (" +
-        formatTime12(next.starts_at) + " – " + formatTime12(next.ends_at) + ")";
-    } else {
-      kpiNext.style.display = "none";
-    }
-  }
-
   function isMobileView(){
     return window.matchMedia("(max-width: 820px)").matches;
   }
@@ -492,7 +556,7 @@
     monthPick.value = month;
 
     monthLabelTop.textContent = monthLabel(month);
-    waPublishBtn.textContent = "📢 إشعار واتساب (" + monthLabel(month) + ")";
+    publishHint.textContent = "رابط الشهر: " + buildMonthLink(month);
 
     const start = month + "-01T00:00:00+03:00";
     const parts = month.split("-").map(Number);
@@ -512,8 +576,8 @@
       return;
     }
 
-    const rows = meals || [];
-    updateKPIs(rows);
+    cachedMonthMeals = meals || [];
+    updateKPIs();
 
     const hostNamesOf = (r) => {
       const ids = (r.meal_hosts || []).map(x => x.member_id);
@@ -528,8 +592,8 @@
       const s = new Date(r.starts_at);
       const e = new Date(r.ends_at);
 
-      const partsS = new Intl.DateTimeFormat("en-CA", { timeZone:"Asia/Riyadh", year:"numeric", month:"2-digit", day:"2-digit" }).format(s);
-      dateEl.value = partsS;
+      const dateOnly = new Intl.DateTimeFormat("en-CA", { timeZone:"Asia/Riyadh", year:"numeric", month:"2-digit", day:"2-digit" }).format(s);
+      dateEl.value = dateOnly;
 
       const timeS = new Intl.DateTimeFormat("en-GB", { timeZone:"Asia/Riyadh", hour:"2-digit", minute:"2-digit", hour12:false }).format(s);
       const timeE = new Intl.DateTimeFormat("en-GB", { timeZone:"Asia/Riyadh", hour:"2-digit", minute:"2-digit", hour12:false }).format(e);
@@ -542,15 +606,16 @@
       renderHostsPicker();
       renderHijriPreview();
       await updateDuplicateWarning();
-      editNote.textContent = "وضع التعديل: احفظ لتحديث الموعد ثم (اختياري) أرسل إشعار تعديل عبر واتساب.";
-      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      editNote.textContent = "وضع التعديل: احفظ لتحديث الموعد.";
+      openTab("tabSchedule"); // ✅ يرجع لجدولة مباشرة
     };
 
     monthTableWrap.innerHTML = "";
 
     if (isMobileView()){
       const wrap = el("div", { class:"monthCards" }, []);
-      rows.forEach(r=>{
+      cachedMonthMeals.forEach(r=>{
         const hostNames = hostNamesOf(r);
         const card = el("div", { class:"monthCard", onclick: () => onEdit(r) }, [
           el("div", { class:"monthTop" }, [
@@ -559,13 +624,13 @@
           ]),
           el("div", { style:"margin-top:8px" }, [
             el("div", {}, [formatGregorian(r.starts_at)]),
-            el("div", { class:"small muted" }, ["الموافق " + formatHijriUmmAlQura(r.starts_at)]),
+            el("div", { class:"small", style:"color:var(--muted)" }, ["الموافق " + formatHijriUmmAlQura(r.starts_at)]),
           ]),
           el("div", { class:"small", style:"margin-top:8px" }, [
             el("b", {}, ["الداعين: "]),
             hostNames.join(" – ") || "—"
           ]),
-          el("div", { class:"small muted", style:"margin-top:6px" }, [r.notes || "—"])
+          el("div", { class:"small", style:"margin-top:6px;color:var(--muted)" }, [r.notes || "—"])
         ]);
         wrap.appendChild(card);
       });
@@ -583,7 +648,7 @@
       ]));
 
       const tbody = el("tbody", {}, []);
-      rows.forEach(r=>{
+      cachedMonthMeals.forEach(r=>{
         const hostNames = hostNamesOf(r);
         const tr = el("tr", { style:"cursor:pointer", onclick: () => onEdit(r) }, [
           el("td", {}, [mealLabel(r.meal)]),
@@ -615,11 +680,19 @@
     window.open(waLink(msg), "_blank");
   }
 
+  async function copyMonthLink(){
+    const month = monthPick.value || getMonthParam();
+    const link = buildMonthLink(month);
+    await navigator.clipboard.writeText(link);
+    toast("ok", "تم نسخ رابط الشهر.");
+  }
+
   logoutBtn.addEventListener("click", async () => {
     await supabase.auth.signOut();
     location.href = "./login.html";
   });
 
+  // Members events
   addMemberBtn.addEventListener("click", async () => {
     const name = (newMemberEl.value || "").trim();
     if (!name) return;
@@ -628,24 +701,27 @@
     newMemberEl.value = "";
     await loadMembers();
   });
-
   newMemberEl.addEventListener("keydown", (e) => { if (e.key === "Enter") addMemberBtn.click(); });
-
   memberSearch.addEventListener("input", renderMembers);
   showInactive.addEventListener("change", renderMembers);
 
+  // Schedule events
   resetFormBtn.addEventListener("click", resetForm);
   saveMealBtn.addEventListener("click", saveMeal);
   deleteMealBtn.addEventListener("click", deleteMeal);
-
-  reloadMonthBtn.addEventListener("click", loadMonthTable);
-  monthPick.addEventListener("change", loadMonthTable);
-  waPublishBtn.addEventListener("click", publishWhatsApp);
 
   dateEl.addEventListener("change", () => { renderHijriPreview(); updateDuplicateWarning(); });
   startTimeEl.addEventListener("change", updateDuplicateWarning);
   endTimeEl.addEventListener("change", updateDuplicateWarning);
   mealTypeEl.addEventListener("change", updateDuplicateWarning);
+
+  // Month tab events
+  reloadMonthBtn.addEventListener("click", loadMonthTable);
+  monthPick.addEventListener("change", loadMonthTable);
+
+  // Publish tab events
+  waPublishBtn.addEventListener("click", publishWhatsApp);
+  copyLinkBtn.addEventListener("click", copyMonthLink);
 
   (async () => {
     const user = await requireAdmin();
@@ -662,7 +738,10 @@
     await loadMembers();
     await loadMonthTable();
     resetForm();
+
+    toast("ok", "جاهز ✅");
   })();
 </script>
+
 </body>
 </html>
