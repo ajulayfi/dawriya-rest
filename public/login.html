@@ -4,55 +4,91 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>تسجيل دخول الإدارة</title>
+
   <link rel="stylesheet" href="./assets/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
-    .authCard{max-width:520px;margin:auto}
-    .brandTop{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
-    .brandTitle{font-weight:900;font-size:18px}
-    .pwWrap{position:relative}
+    /* تحسينات بسيطة واحترافية بدون كسر app.css */
+    .loginWrap{max-width:520px;margin:28px auto 0}
+    .loginTop{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap
+    }
+    .loginTitle h1{margin:0}
+    .loginTitle .sub{margin-top:6px}
+    .metaLine{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    .metaPill{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:6px 10px;border-radius:999px;
+      border:1px solid var(--line,#e5e7eb);
+      background:rgba(255,255,255,.7);
+      color:var(--muted,#64748b);
+      font-size:12px;font-weight:700
+    }
+    .row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:10px}
+    .linkBtn{
+      background:transparent;border:0;padding:0;margin:0;
+      color:var(--accent,#2563eb);font-weight:800;cursor:pointer;text-decoration:underline
+    }
+    .hint{color:var(--muted,#64748b);font-size:12px;margin-top:8px}
+    .pwRow{position:relative}
     .pwToggle{
-      position:absolute; inset-inline-start:10px; top:50%;
+      position:absolute;inset-inline-start:12px;top:50%;
       transform:translateY(-50%);
       border:1px solid var(--line,#e5e7eb);
       background:#fff;border-radius:999px;
-      padding:6px 10px; cursor:pointer;
-      font-size:12px; font-weight:800;
+      padding:6px 10px;font-size:12px;font-weight:800;cursor:pointer
     }
-    /* عشان زر العين ما يغطي الكتابة */
-    input[type="password"], input[type="text"]{ padding-inline-start:80px; }
+    /* ملاحظة: في RTL زر العين يكون يسار الحقل */
+    .pwRow .input{padding-inline-start:92px}
+    .footerNote{margin-top:14px;color:var(--muted,#64748b);font-size:12px;line-height:1.6}
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="header">
-      <div class="title">
+      <div class="title loginTitle">
         <h1>تسجيل دخول الإدارة</h1>
-        <div class="sub">بريد + كلمة مرور</div>
+        <div class="sub">استخدم بريد الأدمن وكلمة المرور</div>
+
+        <div class="metaLine">
+          <span class="metaPill">🔒 دخول محمي</span>
+          <span class="metaPill">⚡ Supabase Auth</span>
+        </div>
       </div>
     </div>
 
-    <div class="card authCard">
-      <div class="brandTop">
-        <div class="brandTitle">دورية الاستراحة</div>
-        <a class="btn secondary" href="./schedule.html">↩︎ صفحة العرض</a>
-      </div>
-
-      <label for="email">البريد الإلكتروني</label>
-      <input id="email" class="input" type="email" placeholder="name@example.com" autocomplete="email"/>
-
-      <label for="password">كلمة المرور</label>
-      <div class="pwWrap">
-        <button id="pwToggle" class="pwToggle" type="button">👁︎ إظهار</button>
-        <input id="password" class="input" type="password" placeholder="••••••••" autocomplete="current-password"/>
-      </div>
-
-      <div style="display:flex;gap:10px;align-items:center;justify-content:flex-start;margin-top:12px;flex-wrap:wrap">
-        <button id="login" class="btn">تسجيل دخول</button>
+    <div class="card loginWrap">
+      <div class="loginTop">
+        <div>
+          <div style="font-weight:900">بيانات الدخول</div>
+          <div class="hint">لن نعرض صفحة الجدول من هنا. هذا مخصص للإدارة فقط.</div>
+        </div>
       </div>
 
       <div class="hr"></div>
-      <div id="msg" class="notice">استخدم بيانات الأدمن.</div>
+
+      <label for="email">البريد الإلكتروني</label>
+      <input id="email" class="input" type="email" placeholder="name@example.com" autocomplete="email" inputmode="email"/>
+
+      <label for="password">كلمة المرور</label>
+      <div class="pwRow">
+        <button id="togglePw" class="pwToggle" type="button" aria-label="إظهار/إخفاء كلمة المرور">👁️ إظهار</button>
+        <input id="password" class="input" type="password" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+
+      <div class="row">
+        <button id="login" class="btn">تسجيل دخول</button>
+        <button id="clear" class="btn secondary" type="button">مسح</button>
+      </div>
+
+      <div class="hr"></div>
+      <div id="msg" class="notice">اكتب بريد الأدمن وكلمة المرور ثم سجّل الدخول.</div>
+
+      <div class="footerNote">
+        إذا واجهت رسالة (غير مصرح)، فهذا يعني أن بريدك غير مضاف في قائمة الأدمن.
+      </div>
     </div>
   </div>
 
@@ -62,55 +98,88 @@
 
   const emailEl = document.getElementById("email");
   const passEl  = document.getElementById("password");
-  const msg     = document.getElementById("msg");
-  const btn     = document.getElementById("login");
-  const pwToggle= document.getElementById("pwToggle");
+  const msgEl   = document.getElementById("msg");
+  const loginBtn= document.getElementById("login");
+  const clearBtn= document.getElementById("clear");
+  const togglePw= document.getElementById("togglePw");
 
-  function showError(arText, raw){
-    msg.className = "notice warn";
-    msg.textContent = arText + (raw ? (" (" + raw + ")") : "");
+  function setMsg(kind, text){
+    msgEl.className = kind ? ("notice " + kind) : "notice";
+    msgEl.textContent = text;
   }
 
-  pwToggle.addEventListener("click", () => {
-    const isPw = passEl.type === "password";
-    passEl.type = isPw ? "text" : "password";
-    pwToggle.textContent = isPw ? "🙈 إخفاء" : "👁︎ إظهار";
-  });
+  function setBusy(isBusy){
+    loginBtn.disabled = isBusy;
+    clearBtn.disabled = isBusy;
+    emailEl.disabled  = isBusy;
+    passEl.disabled   = isBusy;
+    togglePw.disabled = isBusy;
+
+    loginBtn.textContent = isBusy ? "جارٍ الدخول…" : "تسجيل دخول";
+  }
+
+  function clearForm(){
+    emailEl.value = "";
+    passEl.value = "";
+    emailEl.focus();
+    setMsg("", "تم المسح. اكتب بيانات الدخول.");
+  }
 
   async function doLogin(){
     const email = (emailEl.value || "").trim();
     const password = passEl.value || "";
 
     if (!email || !password){
-      showError("اكتب البريد وكلمة المرور.");
+      setMsg("warn", "اكتب البريد وكلمة المرور.");
       return;
     }
 
-    btn.disabled = true;
-    btn.textContent = "جارٍ الدخول…";
-    msg.className = "notice";
-    msg.textContent = "جارٍ التحقق…";
+    setBusy(true);
+    setMsg("", "جارٍ التحقق…");
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    try{
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (error){
-      // رسائل عربية بسيطة
-      const t = (error.message || "").toLowerCase();
-      if (t.includes("invalid login") || t.includes("invalid") || t.includes("credentials"))
-        showError("بيانات الدخول غير صحيحة.");
-      else
-        showError("تعذر تسجيل الدخول.", error.message);
+      if (error){
+        setMsg("warn", error.message);
+        setBusy(false);
+        return;
+      }
 
-      btn.disabled = false;
-      btn.textContent = "تسجيل دخول";
-      return;
+      // نجاح
+      setMsg("ok", "تم تسجيل الدخول ✅ جارٍ التحويل…");
+      window.location.href = "./admin.html";
+
+    }catch(e){
+      setMsg("warn", "حدث خطأ غير متوقع. حاول مرة أخرى.");
+      setBusy(false);
     }
-
-    window.location.href = "./admin.html";
   }
 
-  btn.addEventListener("click", doLogin);
-  passEl.addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
+  // إظهار/إخفاء كلمة المرور
+  togglePw.addEventListener("click", () => {
+    const isPw = passEl.type === "password";
+    passEl.type = isPw ? "text" : "password";
+    togglePw.textContent = isPw ? "🙈 إخفاء" : "👁️ إظهار";
+    passEl.focus();
+  });
+
+  // أحداث
+  loginBtn.addEventListener("click", doLogin);
+  clearBtn.addEventListener("click", clearForm);
+
+  passEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") doLogin();
+  });
+  emailEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") passEl.focus();
+  });
+
+  // لو فيه جلسة مفتوحة بالفعل → روح للإدارة مباشرة
+  (async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) window.location.href = "./admin.html";
+  })();
 </script>
 </body>
 </html>
