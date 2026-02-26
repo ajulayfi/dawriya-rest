@@ -6,6 +6,22 @@
   <title>تسجيل دخول الإدارة</title>
   <link rel="stylesheet" href="./assets/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .authCard{max-width:520px;margin:auto}
+    .brandTop{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .brandTitle{font-weight:900;font-size:18px}
+    .pwWrap{position:relative}
+    .pwToggle{
+      position:absolute; inset-inline-start:10px; top:50%;
+      transform:translateY(-50%);
+      border:1px solid var(--line,#e5e7eb);
+      background:#fff;border-radius:999px;
+      padding:6px 10px; cursor:pointer;
+      font-size:12px; font-weight:800;
+    }
+    /* عشان زر العين ما يغطي الكتابة */
+    input[type="password"], input[type="text"]{ padding-inline-start:80px; }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -16,20 +32,27 @@
       </div>
     </div>
 
-    <div class="card" style="max-width:520px;margin:auto">
+    <div class="card authCard">
+      <div class="brandTop">
+        <div class="brandTitle">دورية الاستراحة</div>
+        <a class="btn secondary" href="./schedule.html">↩︎ صفحة العرض</a>
+      </div>
+
       <label for="email">البريد الإلكتروني</label>
       <input id="email" class="input" type="email" placeholder="name@example.com" autocomplete="email"/>
 
       <label for="password">كلمة المرور</label>
-      <input id="password" class="input" type="password" placeholder="••••••••" autocomplete="current-password"/>
+      <div class="pwWrap">
+        <button id="pwToggle" class="pwToggle" type="button">👁︎ إظهار</button>
+        <input id="password" class="input" type="password" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
 
       <div style="display:flex;gap:10px;align-items:center;justify-content:flex-start;margin-top:12px;flex-wrap:wrap">
         <button id="login" class="btn">تسجيل دخول</button>
-        <a class="btn secondary" href="./schedule.html">صفحة العرض</a>
       </div>
 
       <div class="hr"></div>
-      <div id="msg" class="notice">استخدم بيانات الأدمن التي أنشأتها في Supabase.</div>
+      <div id="msg" class="notice">استخدم بيانات الأدمن.</div>
     </div>
   </div>
 
@@ -38,17 +61,28 @@
   setTitle("تسجيل دخول الإدارة");
 
   const emailEl = document.getElementById("email");
-  const passEl = document.getElementById("password");
-  const msg = document.getElementById("msg");
-  const btn = document.getElementById("login");
+  const passEl  = document.getElementById("password");
+  const msg     = document.getElementById("msg");
+  const btn     = document.getElementById("login");
+  const pwToggle= document.getElementById("pwToggle");
+
+  function showError(arText, raw){
+    msg.className = "notice warn";
+    msg.textContent = arText + (raw ? (" (" + raw + ")") : "");
+  }
+
+  pwToggle.addEventListener("click", () => {
+    const isPw = passEl.type === "password";
+    passEl.type = isPw ? "text" : "password";
+    pwToggle.textContent = isPw ? "🙈 إخفاء" : "👁︎ إظهار";
+  });
 
   async function doLogin(){
     const email = (emailEl.value || "").trim();
     const password = passEl.value || "";
 
     if (!email || !password){
-      msg.className = "notice warn";
-      msg.textContent = "اكتب البريد وكلمة المرور.";
+      showError("اكتب البريد وكلمة المرور.");
       return;
     }
 
@@ -60,8 +94,13 @@
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error){
-      msg.className = "notice warn";
-      msg.textContent = error.message;
+      // رسائل عربية بسيطة
+      const t = (error.message || "").toLowerCase();
+      if (t.includes("invalid login") || t.includes("invalid") || t.includes("credentials"))
+        showError("بيانات الدخول غير صحيحة.");
+      else
+        showError("تعذر تسجيل الدخول.", error.message);
+
       btn.disabled = false;
       btn.textContent = "تسجيل دخول";
       return;
