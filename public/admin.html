@@ -340,7 +340,7 @@
       hostsPicker.textContent = "—";
       return;
     }
-    members = data || [];
+    members = (data || []).map(m => ({ ...m, id: String(m.id) }));
     renderMembers();
     renderHostsPicker();
     updateKPIs();
@@ -387,7 +387,7 @@
 
     const wrap = el("div", { style:"display:flex;flex-wrap:wrap;gap:10px" }, []);
     active.forEach(m => {
-      const checked = selectedHostIds.has(m.id);
+      const checked = selectedHostIds.has(String(m.id));
       const chip = el("label", {
         class: "chip",
         style: "cursor:pointer;display:inline-flex;align-items:center;gap:8px"
@@ -396,8 +396,8 @@
           type:"checkbox",
           checked,
           onchange: (e) => {
-            if (e.target.checked) selectedHostIds.add(m.id);
-            else selectedHostIds.delete(m.id);
+            if (e.target.checked) selectedHostIds.add(String(m.id));
+            else selectedHostIds.delete(String(m.id));
           }
         }),
         m.full_name
@@ -474,7 +474,7 @@
     const clashes = [];
     (data||[]).forEach(r=>{
       if (editingMealId && r.id === editingMealId) return;
-      const ids = (r.meal_hosts||[]).map(x=>x.member_id);
+      const ids = (r.meal_hosts||[]).map(x=>String(x.member_id));
       const overlap = hostIds.filter(id=>ids.includes(id));
       if (overlap.length){
         const names = overlap.map(id => members.find(m=>m.id===id)?.full_name).filter(Boolean);
@@ -523,7 +523,7 @@
 
     await supabase.from("meal_hosts").delete().eq("meal_id", mealId);
 
-    const hostRows = Array.from(selectedHostIds).map(member_id => ({ meal_id: mealId, member_id }));
+    const hostRows = Array.from(selectedHostIds).map(id => ({ meal_id: mealId, member_id: Number(id) }));
     if (hostRows.length){
       const { error } = await supabase.from("meal_hosts").insert(hostRows);
       if (error){ toast("warn", error.message); return; }
@@ -619,7 +619,7 @@ console.log("MEALS RAW:", meals);
       endTimeEl.value = timeE;
 
       notesEl.value = r.notes || "";
-      const ids = (r.meal_hosts || []).map(x => x.member_id);
+      const ids = (r.meal_hosts || []).map(x => String(x.member_id));
       selectedHostIds = new Set(ids);
       renderHostsPicker();
       renderHijriPreview();
