@@ -1,4 +1,12 @@
-import { SUPABASE_URL, SUPABASE_ANON_KEY, ACCESS_TOKEN, TZ, DEFAULT_LOCATION, APP_TITLE } from "./config.js";
+// public/assets/app.js
+import {
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY,
+  ACCESS_TOKEN,
+  TZ,
+  DEFAULT_LOCATION,
+  APP_TITLE
+} from "./config.js";
 
 export const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -45,7 +53,11 @@ export function formatHijriUmmAlQura(dateISO){
 export function monthLabel(yyyy_mm){
   const [y,m] = yyyy_mm.split("-").map(Number);
   const d = new Date(Date.UTC(y, m-1, 1, 12, 0, 0));
-  return new Intl.DateTimeFormat("ar-SA", { timeZone: TZ, month:"long", year:"numeric" }).format(d);
+  return new Intl.DateTimeFormat("ar-SA", {
+    timeZone: TZ,
+    month:"long",
+    year:"numeric"
+  }).format(d);
 }
 
 export function getMonthParam(){
@@ -66,18 +78,26 @@ export function waLink(text){
 }
 
 export function toISOFromDateAndTime(dateStr, timeStr){
+  // ثابت +03:00 (الرياض) مثل اللي عندك — لا نغيره عشان ما يأثر على أي شي
   return `${dateStr}T${timeStr}:00+03:00`;
 }
 
+// ✅ إضافة يوم للتاريخ بدون الاعتماد على توقيت الجهاز (آمن وبدون ما يأثر على باقي النظام)
+function addDaysToDateStr(dateStr, days){
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + days, 0, 0, 0));
+  return `${dt.getUTCFullYear()}-${pad2(dt.getUTCMonth() + 1)}-${pad2(dt.getUTCDate())}`;
+}
+
+// ✅ يحسب endISO بشكل صحيح ويضمن "اليوم التالي" عند عبور منتصف الليل
 export function computeEndISO(dateStr, startTime, endTime){
   const startISO = toISOFromDateAndTime(dateStr, startTime);
-  const start = new Date(startISO);
 
-  let endDateStr = dateStr;
-  if (endTime <= startTime){
-    const d = new Date(start.getTime() + 24*60*60*1000);
-    endDateStr = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
-  }
+  // إذا النهاية أقل/مساوية للبداية => عبور منتصف الليل => اليوم التالي
+  const endDateStr = (endTime <= startTime)
+    ? addDaysToDateStr(dateStr, 1)
+    : dateStr;
+
   const endISO = toISOFromDateAndTime(endDateStr, endTime);
   return { startISO, endISO };
 }
