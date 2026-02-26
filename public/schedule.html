@@ -119,8 +119,7 @@
   }
 
   function monthLabel(month){
-    const parts = month.split("-");
-    const y = Number(parts[0]), m = Number(parts[1]);
+    const [y, m] = month.split("-").map(Number);
     const d = new Date(Date.UTC(y, m-1, 1));
     return new Intl.DateTimeFormat("ar-SA", { year:"numeric", month:"long", timeZone: TZ }).format(d);
   }
@@ -134,8 +133,8 @@
     const d = new Date(iso);
     const weekday = new Intl.DateTimeFormat("ar-SA", { weekday:"long", timeZone: TZ }).format(d);
     const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(d);
-    const arr = ymd.split("-");
-    return weekday + " " + arr[2] + "/" + arr[1] + "/" + arr[0];
+    const [y, m, dd] = ymd.split("-");
+    return weekday + " " + dd + "/" + m + "/" + y;
   }
 
   function formatHijriWithPrefix(iso){
@@ -151,6 +150,27 @@
   function formatTime12(iso){
     const d = new Date(iso);
     return new Intl.DateTimeFormat("ar-SA", { hour:"numeric", minute:"2-digit", hour12:true, timeZone: TZ }).format(d);
+  }
+
+  // ✅ وقت + (اليوم التالي) إذا النهاية بتاريخ مختلف داخل TZ
+  function formatTimeRange(startsISO, endsISO){
+    const s = new Date(startsISO);
+    const e = new Date(endsISO);
+
+    const sTxt = formatTime12(startsISO);
+    const eTxt = formatTime12(endsISO);
+
+    const fmtDay = new Intl.DateTimeFormat("en-CA", {
+      timeZone: TZ,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    });
+
+    const sDay = fmtDay.format(s);
+    const eDay = fmtDay.format(e);
+
+    return (sDay !== eDay) ? `${sTxt} – ${eTxt} (اليوم التالي)` : `${sTxt} – ${eTxt}`;
   }
 
   function isTodayTZ(iso){
@@ -206,7 +226,7 @@
     }
     const g = formatGregorianDayAndDate(r.starts_at);
     const h = formatHijriWithPrefix(r.starts_at);
-    const t = formatTime12(r.starts_at) + " – " + formatTime12(r.ends_at);
+    const t = formatTimeRange(r.starts_at, r.ends_at);
 
     box.style.display = "block";
     box.innerHTML = "";
@@ -305,7 +325,7 @@
     const hosts = (r._hostNames && r._hostNames.length) ? r._hostNames.join(" – ") : "—";
     const g = formatGregorianDayAndDate(r.starts_at);
     const h = formatHijriWithPrefix(r.starts_at);
-    const t = formatTime12(r.starts_at) + " – " + formatTime12(r.ends_at);
+    const t = formatTimeRange(r.starts_at, r.ends_at);
 
     const card = document.createElement("div");
     card.className = "card mealCardPro mealCard";
@@ -446,7 +466,6 @@
 
     // فلتر أساسي (للقسم الرئيسي فقط)
     let base = cachedRows.slice();
-
     if (activeFilter === "upcoming") base = base.filter(r => new Date(r.starts_at) >= now);
     else if (activeFilter !== "all") base = base.filter(r => r.meal === activeFilter);
 
@@ -485,7 +504,7 @@
     if (pastRowsAll.length){
       const details = document.createElement("details");
       details.className = "pastDetails";
-      details.open = false; // مطوي افتراضيًا
+      details.open = false;
 
       const summary = document.createElement("summary");
 
@@ -524,8 +543,7 @@
     $("pastWrap").innerHTML = "";
 
     const start = m + "-01T00:00:00+03:00";
-    const parts = m.split("-");
-    const yy = Number(parts[0]), mm = Number(parts[1]);
+    const [yy, mm] = m.split("-").map(Number);
     const endDate = new Date(Date.UTC(yy, mm, 1, 0,0,0));
     const end = endDate.getUTCFullYear() + "-" + pad2(endDate.getUTCMonth()+1) + "-" + pad2(endDate.getUTCDate()) + "T00:00:00+03:00";
 
