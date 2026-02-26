@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>اختبار عرض المواعيد</title>
+
+  <style>
+    body{
+      font-family: system-ui;
+      background:#f5f5f5;
+      padding:20px;
+    }
+
+    h1{
+      margin-bottom:20px;
+    }
+
+    .card{
+      background:white;
+      padding:15px;
+      margin-bottom:10px;
+      border-radius:10px;
+      box-shadow:0 5px 15px rgba(0,0,0,.08);
+    }
+
+    .empty{
+      color:red;
+      font-weight:bold;
+    }
+
+    pre{
+      background:#111;
+      color:#0f0;
+      padding:15px;
+      overflow:auto;
+      border-radius:8px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>صفحة اختبار عرض المواعيد</h1>
+
+<div id="list"></div>
+
+<h2>البيانات الخام:</h2>
+<pre id="raw"></pre>
+
+<script>
+async function loadData() {
+  try {
+
+    // عدل الرابط حسب API عندك
+    const res = await fetch("https://YOUR_PROJECT_URL/schedules");
+    const data = await res.json();
+
+    console.log("DATA:", data);
+
+    document.getElementById("raw").textContent =
+      JSON.stringify(data, null, 2);
+
+    const list = document.getElementById("list");
+
+    if (!data || data.length === 0) {
+      list.innerHTML = "<div class='empty'>لا توجد بيانات</div>";
+      return;
+    }
+
+    data.forEach(item => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <div><strong>اليوم:</strong> ${item.day}</div>
+        <div><strong>العضو 1:</strong> ${item.member1}</div>
+        <div><strong>العضو 2:</strong> ${item.member2}</div>
+      `;
+      list.appendChild(card);
+    });
+
+  } catch (err) {
+    console.error(err);
+    document.getElementById("list").innerHTML =
+      "<div class='empty'>حدث خطأ في جلب البيانات</div>";
+  }
+}
+
+loadData();
+</script>
+
+</body>
+</html>
