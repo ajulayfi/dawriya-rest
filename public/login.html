@@ -154,10 +154,8 @@
 
   // إذا كان مسجلاً بالفعل → روح للإدارة
   (async () => {
-    // نستخدم getSession (يقرأ من localStorage) وليس getUser (يتصل بالسيرفر)
-    // هذا يضمن أنه بعد signOut() لن يتم إعادة التوجيه للأدمن
-    const { data:{ session } } = await sb.auth.getSession();
-    if (session) window.location.replace("./admin.html");
+    const { data:{ user } } = await sb.auth.getUser();
+    if (user) window.location.href = "./admin.html";
   })();
 </script>
 </body>
