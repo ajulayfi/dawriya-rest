@@ -3,105 +3,98 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>تسجيل دخول الإدارة</title>
+  <title>تسجيل دخول الإدارة — دورية الاستراحة</title>
 
   <link rel="stylesheet" href="./assets/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    /* تحسينات بسيطة واحترافية بدون كسر app.css */
-    .loginWrap{max-width:520px;margin:28px auto 0}
-    .loginTop{
-      display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap
-    }
-    .loginTitle h1{margin:0}
-    .loginTitle .sub{margin-top:6px}
-    .metaLine{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    .loginWrap{max-width:480px;margin:40px auto 0}
+    .loginTitle h1{margin:0;font-size:22px}
+    .loginTitle .sub{margin-top:4px}
+    .metaLine{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
     .metaPill{
-      display:inline-flex;align-items:center;gap:8px;
-      padding:6px 10px;border-radius:999px;
-      border:1px solid var(--line,#e5e7eb);
-      background:rgba(255,255,255,.7);
-      color:var(--muted,#64748b);
-      font-size:12px;font-weight:700
+      display:inline-flex;align-items:center;gap:6px;
+      padding:5px 12px;border-radius:999px;
+      border:1.5px solid var(--line);background:rgba(255,255,255,.8);
+      color:var(--muted);font-size:12px;font-weight:700;
     }
-    .row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:10px}
-    .linkBtn{
-      background:transparent;border:0;padding:0;margin:0;
-      color:var(--accent,#2563eb);font-weight:800;cursor:pointer;text-decoration:underline
-    }
-    .hint{color:var(--muted,#64748b);font-size:12px;margin-top:8px}
     .pwRow{position:relative}
     .pwToggle{
       position:absolute;inset-inline-start:12px;top:50%;
       transform:translateY(-50%);
-      border:1px solid var(--line,#e5e7eb);
-      background:#fff;border-radius:999px;
-      padding:6px 10px;font-size:12px;font-weight:800;cursor:pointer
+      border:1px solid var(--line);background:#fff;border-radius:999px;
+      padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;
+      font-family:inherit;transition:background .15s;
     }
-    /* ملاحظة: في RTL زر العين يكون يسار الحقل */
+    .pwToggle:hover{background:#f8fafc}
     .pwRow .input{padding-inline-start:92px}
-    .footerNote{margin-top:14px;color:var(--muted,#64748b);font-size:12px;line-height:1.6}
+    .footerNote{margin-top:14px;color:var(--muted);font-size:12px;line-height:1.7}
+    .action-row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:14px}
+    .back-link{font-size:13px;color:var(--muted);font-weight:600;text-decoration:underline;cursor:pointer}
+    .back-link:hover{color:var(--text)}
   </style>
 </head>
 
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="title loginTitle">
-        <h1>تسجيل دخول الإدارة</h1>
-        <div class="sub">استخدم بريد الأدمن وكلمة المرور</div>
-
-        <div class="metaLine">
-          <span class="metaPill">🔒 دخول محمي</span>
-          <span class="metaPill">⚡ Supabase Auth</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="card loginWrap">
-      <div class="loginTop">
-        <div>
-          <div style="font-weight:900">بيانات الدخول</div>
-          <div class="hint">لن نعرض صفحة الجدول من هنا. هذا مخصص للإدارة فقط.</div>
-        </div>
-      </div>
-
-      <div class="hr"></div>
-
-      <label for="email">البريد الإلكتروني</label>
-      <input id="email" class="input" type="email" placeholder="name@example.com" autocomplete="email" inputmode="email"/>
-
-      <label for="password">كلمة المرور</label>
-      <div class="pwRow">
-        <button id="togglePw" class="pwToggle" type="button" aria-label="إظهار/إخفاء كلمة المرور">👁️ إظهار</button>
-        <input id="password" class="input" type="password" placeholder="••••••••" autocomplete="current-password"/>
-      </div>
-
-      <div class="row">
-        <button id="login" class="btn">تسجيل دخول</button>
-        <button id="clear" class="btn secondary" type="button">مسح</button>
-      </div>
-
-      <div class="hr"></div>
-      <div id="msg" class="notice">اكتب بريد الأدمن وكلمة المرور ثم سجّل الدخول.</div>
-
-      <div class="footerNote">
-        إذا واجهت رسالة (غير مصرح)، فهذا يعني أن بريدك غير مضاف في قائمة الأدمن.
+<div class="container">
+  <div class="header">
+    <div class="title loginTitle">
+      <h1>تسجيل دخول الإدارة</h1>
+      <div class="sub">استخدم بريد الأدمن وكلمة المرور</div>
+      <div class="metaLine">
+        <span class="metaPill">🔒 دخول محمي</span>
+        <span class="metaPill">⚡ Supabase Auth</span>
       </div>
     </div>
   </div>
 
+  <div class="card loginWrap">
+    <div style="font-weight:900;font-size:15px;margin-bottom:4px">بيانات الدخول</div>
+    <div class="small" style="margin-bottom:14px">هذه الصفحة مخصصة للإدارة فقط — لعرض الجدول العام <a href="./schedule.html" style="color:var(--accent);font-weight:700">اضغط هنا</a>.</div>
+
+    <div class="hr"></div>
+
+    <label for="email">البريد الإلكتروني</label>
+    <input id="email" class="input" type="email" placeholder="name@example.com"
+           autocomplete="email" inputmode="email"/>
+
+    <label for="password" style="margin-top:12px">كلمة المرور</label>
+    <div class="pwRow">
+      <button id="togglePw" class="pwToggle" type="button">👁️ إظهار</button>
+      <input id="password" class="input" type="password" placeholder="••••••••"
+             autocomplete="current-password"/>
+    </div>
+
+    <div class="action-row">
+      <button id="login" class="btn">تسجيل دخول</button>
+      <button id="clear" class="btn secondary" type="button">مسح</button>
+      <a href="./schedule.html" class="back-link">← رجوع للجدول</a>
+    </div>
+
+    <div class="hr"></div>
+
+    <div id="msg" class="notice">اكتب بريد الأدمن وكلمة المرور ثم سجّل الدخول.</div>
+
+    <div class="footerNote">
+      إذا ظهرت رسالة (غير مصرح)، فهذا يعني أن بريدك غير مضاف في قائمة الأدمن بـ Supabase.
+    </div>
+  </div>
+</div>
+
 <script type="module">
-  import { supabase, setTitle } from "./assets/app.js";
-  setTitle("تسجيل دخول الإدارة");
+  import { SUPABASE_URL, SUPABASE_ANON_KEY, APP_TITLE } from "./assets/config.js";
+
+  document.title = `تسجيل دخول الإدارة • ${APP_TITLE}`;
+
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   const emailEl = document.getElementById("email");
   const passEl  = document.getElementById("password");
   const msgEl   = document.getElementById("msg");
-  const loginBtn= document.getElementById("login");
-  const clearBtn= document.getElementById("clear");
-  const togglePw= document.getElementById("togglePw");
+  const loginBtn = document.getElementById("login");
+  const clearBtn = document.getElementById("clear");
+  const togglePw = document.getElementById("togglePw");
 
   function setMsg(kind, text){
     msgEl.className = kind ? ("notice " + kind) : "notice";
@@ -109,12 +102,7 @@
   }
 
   function setBusy(isBusy){
-    loginBtn.disabled = isBusy;
-    clearBtn.disabled = isBusy;
-    emailEl.disabled  = isBusy;
-    passEl.disabled   = isBusy;
-    togglePw.disabled = isBusy;
-
+    [loginBtn, clearBtn, emailEl, passEl, togglePw].forEach(el => el.disabled = isBusy);
     loginBtn.textContent = isBusy ? "جارٍ الدخول…" : "تسجيل دخول";
   }
 
@@ -128,35 +116,30 @@
   async function doLogin(){
     const email = (emailEl.value || "").trim();
     const password = passEl.value || "";
-
-    if (!email || !password){
-      setMsg("warn", "اكتب البريد وكلمة المرور.");
-      return;
-    }
+    if (!email || !password){ setMsg("warn","اكتب البريد وكلمة المرور."); return; }
 
     setBusy(true);
     setMsg("", "جارٍ التحقق…");
 
     try{
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-
+      const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error){
-        setMsg("warn", error.message);
+        const msgs = {
+          "Invalid login credentials": "البريد أو كلمة المرور غير صحيحة.",
+          "Email not confirmed": "يرجى تأكيد بريدك الإلكتروني أولاً.",
+        };
+        setMsg("warn", msgs[error.message] || error.message);
         setBusy(false);
         return;
       }
-
-      // نجاح
-      setMsg("ok", "تم تسجيل الدخول ✅ جارٍ التحويل…");
+      setMsg("ok","تم تسجيل الدخول ✅ جارٍ التحويل…");
       window.location.href = "./admin.html";
-
     }catch(e){
-      setMsg("warn", "حدث خطأ غير متوقع. حاول مرة أخرى.");
+      setMsg("warn","حدث خطأ غير متوقع. حاول مرة أخرى.");
       setBusy(false);
     }
   }
 
-  // إظهار/إخفاء كلمة المرور
   togglePw.addEventListener("click", () => {
     const isPw = passEl.type === "password";
     passEl.type = isPw ? "text" : "password";
@@ -164,20 +147,14 @@
     passEl.focus();
   });
 
-  // أحداث
   loginBtn.addEventListener("click", doLogin);
   clearBtn.addEventListener("click", clearForm);
+  passEl.addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
+  emailEl.addEventListener("keydown", e => { if (e.key === "Enter") passEl.focus(); });
 
-  passEl.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") doLogin();
-  });
-  emailEl.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") passEl.focus();
-  });
-
-  // لو فيه جلسة مفتوحة بالفعل → روح للإدارة مباشرة
+  // إذا كان مسجلاً بالفعل → روح للإدارة
   (async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data:{ user } } = await sb.auth.getUser();
     if (user) window.location.href = "./admin.html";
   })();
 </script>
