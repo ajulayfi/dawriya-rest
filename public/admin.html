@@ -504,7 +504,11 @@ async function loadMonthTable(){
 }
 
 /* ── Events ── */
-$("logout").addEventListener("click",async()=>{ await supabase.auth.signOut(); location.href="./login.html"; });
+$("logout").addEventListener("click",async()=>{
+  $("logout").disabled=true; $("logout").textContent="جارٍ الخروج…";
+  try { await supabase.auth.signOut({ scope:"local" }); } catch(e){ console.warn("signOut error",e); }
+  location.replace("./login.html");
+});
 $("cancelEdit").addEventListener("click",()=>resetForm());
 $("addMember").addEventListener("click",async()=>{
   const name=($("newMember").value||"").trim(); if (!name) return;
