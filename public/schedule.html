@@ -84,10 +84,17 @@
   let cachedRows = [];
   let nextMeal = null;
   let countdownTimer = null;
+  let isLoading = false;
 
   function setMessage(kind, text){
     $("msg").className = kind ? ("notice " + kind) : "notice";
     $("msg").textContent = text;
+  }
+
+  function setLoading(on){
+    isLoading = on;
+    $("reload").disabled = on;
+    $("monthPick").disabled = on;
   }
 
   function setFilter(f){
@@ -338,72 +345,82 @@
   }
 
   async function loadMonth(m){
+    if (isLoading) return;
+
+    setLoading(true);
+
     $("monthPick").value = m;
     $("monthBadge").textContent = monthLabel(m);
 
-    setMessage("", " "); // keep space (better UX)
+    // Skeleton instead of loading text
+    setMessage("", " ");
     $("list").innerHTML = skeletonMealsHTML(3);
     $("pastWrap").innerHTML = "";
+    $("nextBox").style.display = "none";
 
     const start = m + "-01T00:00:00+03:00";
     const [yy, mm] = m.split("-").map(Number);
     const endDate = new Date(Date.UTC(yy, mm, 1));
     const end = endDate.getUTCFullYear() + "-" + pad2(endDate.getUTCMonth()+1) + "-" + pad2(endDate.getUTCDate()) + "T00:00:00+03:00";
 
-    const resMeals = await sb
-      .from("meals")
-      .select(`
-        id, meal, starts_at, ends_at, notes,
-        meal_hosts (
-          member_id,
-          members ( full_name )
-        )
-      `)
-      .gte("starts_at", start)
-      .lt("starts_at", end)
-      .order("starts_at", { ascending:true });
+    try{
+      const resMeals = await sb
+        .from("meals")
+        .select(`
+          id, meal, starts_at, ends_at, notes,
+          meal_hosts (
+            member_id,
+            members ( full_name )
+          )
+        `)
+        .gte("starts_at", start)
+        .lt("starts_at", end)
+        .order("starts_at", { ascending:true });
 
-    if (resMeals.error){
-      setMessage("warn", "تعذر تحميل البيانات: " + resMeals.error.message);
-      $("nextBox").style.display = "none";
-      cachedRows = [];
-      nextMeal = null;
-      if (countdownTimer) clearInterval(countdownTimer);
-      $("list").innerHTML = "";
-      return;
+      if (resMeals.error){
+        setMessage("warn", "تعذر تحميل البيانات: " + resMeals.error.message);
+        cachedRows = [];
+        nextMeal = null;
+        if (countdownTimer) clearInterval(countdownTimer);
+        $("list").innerHTML = "";
+        return;
+      }
+
+      const rows = resMeals.data || [];
+      if (!rows.length){
+        setMessage("", "لا توجد بيانات لهذا الشهر حتى الآن.");
+        $("list").innerHTML = '<div class="notice">لا توجد مناسبات.</div>';
+        cachedRows = [];
+        nextMeal = null;
+        if (countdownTimer) clearInterval(countdownTimer);
+        return;
+      }
+
+      rows.forEach(r => {
+        const hosts = (r.meal_hosts || [])
+          .map(h => h.members?.full_name)
+          .filter(Boolean);
+        r._hostNames = hosts;
+      });
+
+      cachedRows = rows;
+      setMessage("ok", "تم تحميل الجدول.");
+
+      nextMeal = pickNextUpcoming(rows);
+      showNextBanner(nextMeal);
+      runCountdown();
+
+      renderAll();
+
+    } finally {
+      setLoading(false);
     }
-
-    const rows = resMeals.data || [];
-    if (!rows.length){
-      setMessage("", "لا توجد بيانات لهذا الشهر حتى الآن.");
-      $("list").innerHTML = '<div class="notice">لا توجد مناسبات.</div>';
-      $("nextBox").style.display = "none";
-      cachedRows = [];
-      nextMeal = null;
-      if (countdownTimer) clearInterval(countdownTimer);
-      return;
-    }
-
-    rows.forEach(r => {
-      const hosts = (r.meal_hosts || [])
-        .map(h => h.members?.full_name)
-        .filter(Boolean);
-      r._hostNames = hosts;
-    });
-
-    cachedRows = rows;
-    setMessage("ok", "تم تحميل الجدول.");
-
-    nextMeal = pickNextUpcoming(rows);
-    showNextBanner(nextMeal);
-    runCountdown();
-
-    renderAll();
   }
 
   const initialMonth = getMonthParam();
   $("monthPick").value = initialMonth;
   $("monthBadge").textContent = monthLabel(initialMonth);
+
   loadMonth(initialMonth);
 </script>
 
