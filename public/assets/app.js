@@ -2,28 +2,92 @@
 import {
   SUPABASE_URL,
   SUPABASE_ANON_KEY,
-  ACCESS_TOKEN, // موجود لكن ما عاد نستخدمه للجدول العام
   TZ,
   DEFAULT_LOCATION,
-  APP_TITLE
+  APP_TITLE,
+  ACCESS_TOKEN
 } from "./config.js";
 
-export const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
 
-// -----------------------------
-// Labels
-// -----------------------------
-export const mealLabel = (m) => ({
+/* =========================================
+   Labels
+========================================= */
+
+export const MEAL_LABEL = {
   futoor: "فطور",
   ghada: "غدا",
   asha: "عشا",
   suhoor: "سحور",
-}[m] || m);
+};
 
-// -----------------------------
-// Helpers
-// -----------------------------
+export const MEAL_ICON = {
+  futoor: "🌅",
+  ghada: "☀️",
+  asha: "🌙",
+  suhoor: "⭐",
+};
+
+export function mealLabel(m){ return MEAL_LABEL[m] || m; }
+export function mealIcon(m){ return MEAL_ICON[m] || "🍽️"; }
+
+/* =========================================
+   Helpers
+========================================= */
+
 export function pad2(n){ return String(n).padStart(2, "0"); }
+export function $(id){ return document.getElementById(id); }
+
+export function setTitle(sub){
+  document.title = sub ? `${sub} • ${APP_TITLE}` : APP_TITLE;
+}
+
+export function waLink(text){
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+
+export function openWhatsAppShare(text){
+  window.open(waLink(text), "_blank");
+}
+
+/* =========================================
+   URL params
+========================================= */
+
+export function getMonthParam(){
+  const params = new URLSearchParams(window.location.search);
+  const month = params.get("month");
+  if (month && /^\d{4}-\d{2}$/.test(month)) return month;
+
+  const now = new Date();
+  return `${now.getFullYear()}-${pad2(now.getMonth()+1)}`;
+}
+
+export function getAccessParam(){
+  const params = new URLSearchParams(window.location.search);
+  return params.get("access") || "";
+}
+
+export function validateAccessToken(access){
+  return access && access === ACCESS_TOKEN;
+}
+
+/* =========================================
+   Date / Time (TZ safe)
+========================================= */
+
+export function monthLabel(yyyy_mm){
+  const [y,m] = yyyy_mm.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m-1, 1, 12, 0, 0));
+  return new Intl.DateTimeFormat("ar-SA", {
+    timeZone: TZ,
+    month:"long",
+    year:"numeric"
+  }).format(d);
+}
 
 export function formatTime12(dateISO){
   return new Intl.DateTimeFormat("ar-SA", {
@@ -31,6 +95,15 @@ export function formatTime12(dateISO){
     hour: "numeric",
     minute: "2-digit",
     hour12: true
+  }).format(new Date(dateISO));
+}
+
+export function formatTime24(dateISO){
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
   }).format(new Date(dateISO));
 }
 
@@ -53,61 +126,62 @@ export function formatHijriUmmAlQura(dateISO){
   }).format(new Date(dateISO));
 }
 
-export function monthLabel(yyyy_mm){
-  const [y,m] = yyyy_mm.split("-").map(Number);
-  const d = new Date(Date.UTC(y, m-1, 1, 12, 0, 0));
-  return new Intl.DateTimeFormat("ar-SA", { timeZone: TZ, month:"long", year:"numeric" }).format(d);
+function ymdTZ(iso){
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ,
+    year:"numeric",
+    month:"2-digit",
+    day:"2-digit"
+  }).format(new Date(iso));
 }
 
-export function getMonthParam(){
-  const params = new URLSearchParams(window.location.search);
-  const month = params.get("month");
-  if (month && /^\d{4}-\d{2}$/.test(month)) return month;
-  const now = new Date();
-  return `${now.getFullYear()}-${pad2(now.getMonth()+1)}`;
+export function isTodayTZ(iso){
+  return ymdTZ(iso) === ymdTZ(new Date());
 }
+
+export function endLabel(endISO, startISO){
+  return ymdTZ(endISO) !== ymdTZ(startISO)
+    ? " (اليوم التالي)"
+    : "";
+}
+
+/* =========================================
+   ISO builder (+03:00 Riyadh)
+========================================= */
 
 export function toISOFromDateAndTime(dateStr, timeStr){
-  // ثابت +03:00 (الرياض)
   return `${dateStr}T${timeStr}:00+03:00`;
 }
 
-// إضافة يوم للتاريخ (آمن بدون توقيت الجهاز)
 function addDaysToDateStr(dateStr, days){
   const [y, m, d] = dateStr.split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d + days, 0, 0, 0));
-  return `${dt.getUTCFullYear()}-${pad2(dt.getUTCMonth() + 1)}-${pad2(dt.getUTCDate())}`;
+  const dt = new Date(Date.UTC(y, m - 1, d + days));
+  return `${dt.getUTCFullYear()}-${pad2(dt.getUTCMonth()+1)}-${pad2(dt.getUTCDate())}`;
 }
 
-// يحسب endISO ويضمن اليوم التالي عند عبور منتصف الليل
 export function computeEndISO(dateStr, startTime, endTime){
-  const toMin = (t) => {
-    const [h, m] = String(t).split(":").map(Number);
-    return (h * 60) + (m || 0);
+  const toMin = (t)=>{
+    const [h,m] = t.split(":").map(Number);
+    return h*60 + (m||0);
   };
 
   const sMin = toMin(startTime);
   const eMin = toMin(endTime);
 
   const startISO = toISOFromDateAndTime(dateStr, startTime);
-  const endDateStr = (eMin <= sMin) ? addDaysToDateStr(dateStr, 1) : dateStr;
+  const endDateStr = (eMin <= sMin)
+    ? addDaysToDateStr(dateStr,1)
+    : dateStr;
+
   const endISO = toISOFromDateAndTime(endDateStr, endTime);
 
   return { startISO, endISO };
 }
 
-// يضيف ملاحظة “(اليوم التالي)” لو نهاية المناسبة صار تاريخ مختلف في توقيت الرياض
-export function endLabel(endISO, startISO){
-  const ymd = (iso) => new Intl.DateTimeFormat("en-CA", {
-    timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit"
-  }).format(new Date(iso));
+/* =========================================
+   ICS
+========================================= */
 
-  return ymd(endISO) !== ymd(startISO) ? " (اليوم التالي)" : "";
-}
-
-// -----------------------------
-// ICS
-// -----------------------------
 function toICSDateUTC(date){
   const y = date.getUTCFullYear();
   const mo = pad2(date.getUTCMonth()+1);
@@ -118,24 +192,25 @@ function toICSDateUTC(date){
 }
 
 function escapeICS(s){
-  return (s || "")
-    .replace(/\\/g, "\\\\")
-    .replace(/\n/g, "\\n")
-    .replace(/,/g, "\\,")
-    .replace(/;/g, "\\;");
+  return (s||"")
+    .replace(/\\/g,"\\\\")
+    .replace(/\n/g,"\\n")
+    .replace(/,/g,"\\,")
+    .replace(/;/g,"\\;");
 }
 
 export function downloadICS({ meal, startsAtISO, endsAtISO, hostsText, notes }){
   const start = new Date(startsAtISO);
-  const end = new Date(endsAtISO);
-  const title = `${mealLabel(meal)} ${DEFAULT_LOCATION}`;
+  const end   = new Date(endsAtISO);
 
-  const descriptionLines = [];
-  if (hostsText) descriptionLines.push(`الداعين: ${hostsText}`);
-  if (notes) descriptionLines.push(`ملاحظة: ${notes}`);
-  const description = descriptionLines.join("\n");
+  const description = [
+    `🍽️ ${mealLabel(meal)}`,
+    `📍 ${DEFAULT_LOCATION}`,
+    hostsText ? `👥 ${hostsText}` : "",
+    notes ? `📝 ${notes}` : ""
+  ].filter(Boolean).join("\n");
 
-  const uid = `meal-${start.getTime()}-${Math.random().toString(16).slice(2)}@${location.host || "local"}`;
+  const uid = `meal-${start.getTime()}@${location.host}`;
   const dtstamp = toICSDateUTC(new Date());
 
   const ics = [
@@ -143,30 +218,19 @@ export function downloadICS({ meal, startsAtISO, endsAtISO, hostsText, notes }){
     "VERSION:2.0",
     "PRODID:-//Dawriya Rest//AR",
     "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
     "BEGIN:VEVENT",
     `UID:${uid}`,
     `DTSTAMP:${dtstamp}`,
     `DTSTART:${toICSDateUTC(start)}`,
     `DTEND:${toICSDateUTC(end)}`,
-    `SUMMARY:${escapeICS(title)}`,
+    `SUMMARY:${escapeICS(APP_TITLE+" - "+mealLabel(meal))}`,
     `DESCRIPTION:${escapeICS(description)}`,
     `LOCATION:${escapeICS(DEFAULT_LOCATION)}`,
-    "BEGIN:VALARM",
-    "TRIGGER:-PT24H",
-    "ACTION:DISPLAY",
-    `DESCRIPTION:${escapeICS("تذكير بدورية الاستراحة")}`,
-    "END:VALARM",
-    "BEGIN:VALARM",
-    "TRIGGER:-PT3H",
-    "ACTION:DISPLAY",
-    `DESCRIPTION:${escapeICS("الدعوة بعد 3 ساعات")}`,
-    "END:VALARM",
     "END:VEVENT",
     "END:VCALENDAR"
   ].join("\r\n");
 
-  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  const blob = new Blob([ics], { type:"text/calendar;charset=utf-8" });
   const url = URL.createObjectURL(blob);
 
   const a = document.createElement("a");
@@ -175,27 +239,42 @@ export function downloadICS({ meal, startsAtISO, endsAtISO, hostsText, notes }){
   document.body.appendChild(a);
   a.click();
   a.remove();
-
   URL.revokeObjectURL(url);
 }
 
-// -----------------------------
-// DOM helpers
-// -----------------------------
-export function el(tag, attrs={}, children=[]){
-  const node = document.createElement(tag);
-  for (const [k,v] of Object.entries(attrs)){
-    if (k === "class") node.className = v;
-    else if (k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2), v);
-    else if (v !== null && v !== undefined) node.setAttribute(k, String(v));
-  }
-  for (const c of children){
-    if (c === null || c === undefined) continue;
-    node.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
-  }
-  return node;
-}
+/* =========================================
+   Skeleton
+========================================= */
 
-export function setTitle(sub){
-  document.title = sub ? `${sub} • ${APP_TITLE}` : APP_TITLE;
+export function renderSkeleton(targetEl, count=6){
+  const wrap = document.createElement("div");
+  wrap.className = "cardsGrid";
+
+  for(let i=0;i<count;i++){
+    const card = document.createElement("div");
+    card.className = "skel-card";
+    card.innerHTML = `
+      <div class="skel-row">
+        <div class="skel-left">
+          <div class="skeleton skel-chip"></div>
+          <div class="skeleton skel-title" style="margin-top:12px"></div>
+          <div class="skeleton skel-line" style="width:85%"></div>
+          <div class="skeleton skel-line" style="width:75%"></div>
+          <div class="skeleton skel-line" style="width:60%"></div>
+        </div>
+        <div class="skel-actions">
+          <div class="skeleton skel-btn"></div>
+          <div class="skeleton skel-btn"></div>
+        </div>
+      </div>
+      <div class="skel-hosts">
+        <div class="skeleton skel-line" style="width:30%;margin-top:0"></div>
+        <div class="skeleton skel-line" style="width:80%"></div>
+      </div>
+    `;
+    wrap.appendChild(card);
+  }
+
+  targetEl.innerHTML = "";
+  targetEl.appendChild(wrap);
 }
