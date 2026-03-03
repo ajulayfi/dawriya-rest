@@ -9,154 +9,120 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    /* ===== Admin Responsive Layout ===== */
-    .adminShell{margin-top:14px}
-    .adminGrid{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:12px;
-    }
-    @media (min-width: 980px){
-      .adminGrid{
-        grid-template-columns: 360px 1fr;
-        align-items:start;
-      }
-      .adminRight{
-        display:grid;
-        grid-template-columns: 1fr;
-        gap:12px;
-      }
-    }
-
-    /* Tabs (mobile only – CSS in app.css already helps, but we enforce) */
-    .tabsBar{margin-top:12px}
-    @media (min-width: 721px){
-      .tabsBar{display:none}
-    }
-
-    /* Sections */
-    .adminSection{display:block}
-    .adminSection.hidden{display:none}
-    @media (min-width: 721px){
-      .adminSection.hidden{display:block} /* show all on desktop */
-    }
-
-    /* Floating quick action (mobile) */
-    .fab{
-      position:fixed;
-      inset-inline-end:16px;
-      bottom:18px;
-      z-index:1200;
-      border-radius:999px;
-      padding:12px 16px;
-      box-shadow:0 14px 38px rgba(15,23,42,.18);
-      display:none;
-    }
-    @media (max-width: 720px){
-      .fab{display:inline-flex}
-    }
-
-    /* Meal form: better on mobile */
-    .form-grid{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:12px;
-    }
-    @media (max-width: 580px){
-      .form-grid{grid-template-columns:1fr}
-    }
-
-    /* Editing banner */
-    .form-editing-banner{
-      background:rgba(99,102,241,.06);
-      border:1.5px solid rgba(99,102,241,.25);
-      border-radius:12px;
-      padding:10px 14px;
-      margin-bottom:12px;
-      font-size:13px;
-      color:#3730a3;
-      font-weight:700;
-      display:none;
-      gap:8px;
-      align-items:center;
-    }
-    .form-editing-banner.show{display:flex}
-    .linkBtn{
-      background:none;border:none;cursor:pointer;
-      color:#3730a3;font-weight:900;font-size:13px;
-      font-family:inherit;padding:0;
-    }
-
-    /* Members list */
-    .member-row{
-      display:flex;align-items:center;justify-content:space-between;
-      padding:10px 14px;border-bottom:1px solid var(--line);gap:12px;
-      transition:background .15s;
-    }
-    .member-row:last-child{border-bottom:none}
-    .member-row:hover{background:#f8fafc}
-    .member-name{font-weight:800;font-size:15px}
-    .member-status{font-size:11px;font-weight:900;letter-spacing:.04em}
-    .status-active{color:#16a34a}
-    .status-inactive{color:var(--muted)}
-
-    /* Hosts pills area */
-    .hosts-wrap{display:flex;flex-wrap:wrap;gap:8px;padding:4px 0}
-
-    /* Save overlay */
-    .saving-overlay{
-      position:fixed;inset:0;background:rgba(255,255,255,.7);backdrop-filter:blur(4px);
-      z-index:2000;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;
-    }
-    .saving-overlay.show{display:flex}
-    .save-spinner{
-      width:44px;height:44px;border:3px solid #e5e7eb;border-top-color:#111827;
-      border-radius:50%;animation:spin .7s linear infinite;
-    }
-    @keyframes spin{to{transform:rotate(360deg)}}
-
-    /* ===== Month view: table on desktop, cards on mobile ===== */
-    .monthDesktop{display:block}
-    .monthMobile{display:none}
-    @media (max-width: 720px){
-      .monthDesktop{display:none}
-      .monthMobile{display:block}
-    }
-
-    .mealRowCard{
+    /* ====== Table actions ====== */
+    .rowActions{display:flex;gap:8px;align-items:center;justify-content:flex-start;flex-wrap:wrap}
+    .iconBtn{
       border:1.5px solid var(--line);
-      border-radius:16px;
-      padding:12px 12px;
       background:#fff;
-      box-shadow:0 2px 10px rgba(15,23,42,.04);
+      border-radius:12px;
+      padding:8px 10px;
+      font-family:inherit;
+      font-weight:900;
+      cursor:pointer;
+      transition:.15s;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      white-space:nowrap;
+      font-size:13px;
+      color:var(--text);
+    }
+    .iconBtn:hover{background:#f8fafc;border-color:#94a3b8}
+    .iconBtn.danger{border-color:rgba(185,28,28,.25);background:rgba(185,28,28,.06);color:#991b1b}
+    .iconBtn.danger:hover{background:rgba(185,28,28,.09);border-color:rgba(185,28,28,.35)}
+    .kTiny{font-size:12px;color:var(--muted);font-weight:800}
+
+    /* ====== Drawer (Edit Panel) ====== */
+    .drawerBackdrop{
+      position:fixed;inset:0;
+      background:rgba(2,6,23,.35);
+      z-index:1000;
+      display:none;
+      animation:fadeIn .18s ease both;
+    }
+    .drawerBackdrop.show{display:block}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+    .drawer{
+      position:fixed;
+      top:0; bottom:0;
+      inset-inline-start:0; /* RTL: start = right visually */
+      width:min(520px, 92vw);
+      background:#fff;
+      border-left:1px solid var(--line);
+      box-shadow:0 22px 70px rgba(0,0,0,.25);
+      z-index:1001;
+      transform:translateX(110%);
+      transition:transform .22s ease;
       display:flex;
       flex-direction:column;
-      gap:10px;
-      cursor:pointer;
-      transition:transform .12s, box-shadow .15s;
     }
-    .mealRowCard:hover{transform:translateY(-1px);box-shadow:0 10px 26px rgba(15,23,42,.10)}
-    .mealRowTop{
+    .drawer.show{transform:translateX(0)}
+    .drawerHeader{
+      padding:14px 16px;
+      border-bottom:1px solid var(--line);
       display:flex;
-      align-items:flex-start;
+      align-items:center;
       justify-content:space-between;
-      gap:12px;
+      gap:10px;
     }
-    .mealRowTitle{font-weight:900}
-    .mealRowMeta{color:var(--muted);font-size:12px;line-height:1.7}
-    .mealRowHosts{font-size:13px;font-weight:800;line-height:1.7}
-    .mealRowNote{font-size:12px;color:var(--muted);line-height:1.7}
-    .mealRowTag{
-      display:inline-flex;align-items:center;gap:6px;
-      padding:6px 10px;border-radius:999px;border:1.5px solid var(--line);
-      background:#fff;font-size:12px;font-weight:900;color:var(--muted);
-      white-space:nowrap;
+    .drawerTitle{font-weight:900}
+    .drawerClose{
+      border:1.5px solid var(--line);
+      background:#fff;
+      border-radius:12px;
+      padding:8px 10px;
+      cursor:pointer;
+      font-weight:900;
+    }
+    .drawerClose:hover{background:#f8fafc;border-color:#94a3b8}
+    .drawerBody{
+      padding:14px 16px;
+      overflow:auto;
+      flex:1 1 auto;
+    }
+    .drawerFooter{
+      padding:12px 16px;
+      border-top:1px solid var(--line);
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:space-between;
+      align-items:center;
+      background:rgba(244,246,251,.65);
+      backdrop-filter:blur(10px);
     }
 
-    /* Toasts */
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:580px){.form-grid{grid-template-columns:1fr}}
+
+    .hosts-wrap{display:flex;flex-wrap:wrap;gap:8px;padding:4px 0}
+
+    /* ====== Modal confirm ====== */
+    .modal{
+      position:fixed; inset:0;
+      display:none;
+      z-index:1200;
+      place-items:center;
+      padding:18px;
+    }
+    .modal.show{display:grid}
+    .modalCard{
+      width:min(520px, 92vw);
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:18px;
+      box-shadow:0 30px 90px rgba(0,0,0,.28);
+      padding:16px;
+      animation:pop .16s ease both;
+    }
+    @keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+    .modalActions{display:flex;gap:10px;justify-content:flex-start;flex-wrap:wrap;margin-top:12px}
+
+    /* ====== Toasts (same as before) ====== */
     .toast-area{
       position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
-      z-index:2500;display:flex;flex-direction:column;gap:8px;align-items:center;
+      z-index:2000;display:flex;flex-direction:column;gap:8px;align-items:center;
       pointer-events:none;
     }
     .toast{
@@ -166,10 +132,23 @@
       box-shadow:0 8px 24px rgba(0,0,0,.2);
       animation:toastIn .25s ease both;
       white-space:nowrap;
+      pointer-events:none;
     }
     .toast.ok{background:#166534;border:1.5px solid rgba(34,197,94,.3)}
     .toast.warn{background:#92400e;border:1.5px solid rgba(245,158,11,.3)}
     @keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+    .saving-overlay{
+      position:fixed;inset:0;background:rgba(255,255,255,.7);backdrop-filter:blur(4px);
+      z-index:1500;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;
+      display:none;
+    }
+    .saving-overlay.show{display:flex}
+    .save-spinner{
+      width:44px;height:44px;border:3px solid #e5e7eb;border-top-color:#111827;
+      border-radius:50%;animation:spin .7s linear infinite;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
 
@@ -179,135 +158,136 @@
   <div class="header">
     <div class="title">
       <h1 id="title">لوحة الإدارة</h1>
-      <div class="sub">إدارة الأعضاء + جدولة شهرية + إشعار واتساب</div>
+      <div class="sub">إدارة الأعضاء + جدولة شهرية — تعديل وحذف بطريقة عملية</div>
     </div>
     <div class="toolbar">
       <span id="who" class="badge">—</span>
-      <a class="btn secondary" href="./schedule.html" target="_blank">👁 الجدول</a>
+      <a class="btn secondary" href="./schedule.html" target="_blank">👁 عرض الجدول</a>
+      <button id="newMealBtn" class="btn">+ مناسبة</button>
       <button id="logout" class="btn secondary">خروج</button>
     </div>
   </div>
 
   <div id="status" class="notice">جارٍ التحقق…</div>
 
-  <!-- Mobile Tabs -->
-  <div class="tabsBar" id="tabsBar">
-    <button class="tabBtn active" data-tab="members">👥 الأعضاء</button>
-    <button class="tabBtn" data-tab="meal">🍽️ المناسبة</button>
-    <button class="tabBtn" data-tab="month">📅 جدول الشهر</button>
-  </div>
+  <!-- Members + Month table -->
+  <div class="grid2" style="margin-top:14px">
 
-  <div class="adminShell">
-    <div class="adminGrid">
+    <!-- Members -->
+    <div class="card">
+      <div style="font-weight:900;font-size:15px;margin-bottom:4px">الأعضاء</div>
+      <div class="small" style="margin-bottom:14px">أضف وفعّل وأوقف الأعضاء</div>
 
-      <!-- LEFT: Members -->
-      <section class="adminSection" id="sec-members">
-        <div class="card">
-          <div style="font-weight:900;font-size:15px;margin-bottom:4px">الأعضاء</div>
-          <div class="small" style="margin-bottom:14px">أضف وفعّل وأوقف الأعضاء</div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <input id="newMember" class="input" placeholder="اسم العضو الجديد" style="flex:1 1 180px"/>
+        <button id="addMember" class="btn" style="white-space:nowrap">+ إضافة</button>
+      </div>
 
-          <div style="display:flex;gap:10px;align-items:center">
-            <input id="newMember" class="input" placeholder="اسم العضو الجديد" style="flex:1 1 180px"/>
-            <button id="addMember" class="btn" style="white-space:nowrap">+ إضافة</button>
-          </div>
+      <div class="hr"></div>
+      <div id="membersList" class="small" style="min-height:60px">—</div>
+    </div>
 
-          <div class="hr"></div>
-          <div id="membersList" class="small" style="min-height:60px">—</div>
+    <!-- Month table -->
+    <div class="card">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:900;font-size:15px" id="tableMonthLabel">جدول الشهر</div>
+          <div class="small">استخدم زر “تعديل” أو “حذف” داخل الصف</div>
         </div>
-      </section>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <input id="monthPick" class="input" type="month" style="width:160px"/>
+          <button id="reloadMonth" class="btn secondary">تحديث</button>
+        </div>
+      </div>
 
-      <!-- RIGHT: Meal + Month -->
-      <div class="adminRight">
-
-        <!-- Meal editor -->
-        <section class="adminSection hidden" id="sec-meal">
-          <div class="card">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-              <div>
-                <div style="font-weight:900;font-size:15px">إضافة / تعديل مناسبة</div>
-                <div class="small">الوقت يدعم عبور منتصف الليل (مثال: 7:00م → 9:00ص)</div>
-              </div>
-              <span class="badge">📍 <b style="color:#111827" id="loc">—</b></span>
-            </div>
-
-            <div class="form-editing-banner" id="editingBanner">
-              <span>✏️</span>
-              <span id="editingLabel">وضع التعديل</span>
-              <button class="linkBtn" id="cancelEditBtn" style="margin-right:auto">✕ إلغاء</button>
-            </div>
-
-            <div class="form-grid">
-              <div>
-                <label>النوع</label>
-                <select id="mealType" class="input">
-                  <option value="futoor">🌅 فطور</option>
-                  <option value="ghada">☀️ غدا</option>
-                  <option value="asha">🌙 عشا</option>
-                  <option value="suhoor">⭐ سحور</option>
-                </select>
-              </div>
-              <div>
-                <label>التاريخ</label>
-                <input id="date" class="input" type="date"/>
-              </div>
-              <div>
-                <label>من</label>
-                <input id="startTime" class="input" type="time" value="19:00"/>
-              </div>
-              <div>
-                <label>إلى</label>
-                <input id="endTime" class="input" type="time" value="00:00"/>
-              </div>
-            </div>
-
-            <label>ملاحظات (اختياري)</label>
-            <textarea id="notes" class="input" rows="2" placeholder="مثال: كل واحد يجيب شيء…"></textarea>
-
-            <div class="hr"></div>
-
-            <div style="font-weight:900;margin-bottom:10px;font-size:14px">الداعون</div>
-            <div id="hostsPicker" class="small">—</div>
-
-            <div class="hr"></div>
-
-            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between">
-              <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button id="saveMeal" class="btn">💾 حفظ</button>
-                <button id="resetForm" class="btn secondary">تفريغ</button>
-                <button id="deleteMeal" class="btn danger" style="display:none">🗑 حذف</button>
-              </div>
-              <button id="waPublish" class="btn secondary">📢 إشعار واتساب</button>
-            </div>
-          </div>
-        </section>
-
-        <!-- Month schedule -->
-        <section class="adminSection hidden" id="sec-month">
-          <div class="card">
-            <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
-              <div>
-                <div style="font-weight:900;font-size:15px;margin-bottom:4px" id="tableMonthLabel">جدول الشهر</div>
-                <div class="small">اضغط على عنصر للتعديل</div>
-              </div>
-              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-                <input id="monthPick" class="input" type="month" style="width:160px"/>
-                <button id="reloadMonth" class="btn secondary">تحديث</button>
-              </div>
-            </div>
-
-            <div class="hr"></div>
-
-            <div id="monthTableWrap">
-              <div class="monthDesktop" style="overflow-x:auto">—</div>
-              <div class="monthMobile" style="display:grid;gap:10px">—</div>
-            </div>
-          </div>
-        </section>
-
+      <div class="hr"></div>
+      <div id="monthTableWrap" style="overflow-x:auto">—</div>
+      <div class="small" style="margin-top:10px">
+        📍 <b id="loc">—</b> <span class="kTiny">• أوقاتك محسوبة على توقيت الرياض</span>
       </div>
     </div>
+
   </div>
 
+</div>
+
+<!-- Drawer -->
+<div class="drawerBackdrop" id="drawerBackdrop"></div>
+<div class="drawer" id="drawer">
+  <div class="drawerHeader">
+    <div>
+      <div class="drawerTitle" id="drawerTitle">—</div>
+      <div class="small" id="drawerSub">—</div>
+    </div>
+    <button class="drawerClose" id="drawerClose">✕</button>
+  </div>
+
+  <div class="drawerBody">
+    <div class="form-grid">
+      <div>
+        <label>النوع</label>
+        <select id="mealType" class="input">
+          <option value="futoor">🌅 فطور</option>
+          <option value="ghada">☀️ غدا</option>
+          <option value="asha">🌙 عشا</option>
+          <option value="suhoor">⭐ سحور</option>
+        </select>
+      </div>
+
+      <div>
+        <label>التاريخ</label>
+        <input id="date" class="input" type="date"/>
+      </div>
+
+      <div>
+        <label>من</label>
+        <input id="startTime" class="input" type="time" value="19:00"/>
+      </div>
+
+      <div>
+        <label>إلى</label>
+        <input id="endTime" class="input" type="time" value="00:00"/>
+      </div>
+    </div>
+
+    <label>ملاحظات (اختياري)</label>
+    <textarea id="notes" class="input" rows="2" placeholder="مثال: كل واحد يجيب شيء…"></textarea>
+
+    <div class="hr"></div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div style="font-weight:900">الداعون</div>
+      <div class="small">اختر من الأعضاء المفعّلين فقط</div>
+    </div>
+
+    <div id="hostsPicker" class="small" style="margin-top:10px">—</div>
+
+    <div class="hr"></div>
+    <div class="small" id="drawerHint">—</div>
+  </div>
+
+  <div class="drawerFooter">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button id="saveMeal" class="btn">💾 حفظ</button>
+      <button id="clearForm" class="btn secondary">تفريغ</button>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button id="deleteMeal" class="btn danger" style="display:none">🗑 حذف</button>
+      <button id="waPublish" class="btn secondary">📢 واتساب</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm modal -->
+<div class="modal" id="confirmModal">
+  <div class="modalCard">
+    <div style="font-weight:900;font-size:15px" id="confirmTitle">تأكيد</div>
+    <div class="small" style="margin-top:6px" id="confirmText">—</div>
+    <div class="modalActions">
+      <button class="btn danger" id="confirmYes">نعم، احذف</button>
+      <button class="btn secondary" id="confirmNo">إلغاء</button>
+    </div>
+  </div>
 </div>
 
 <!-- Toast -->
@@ -319,35 +299,32 @@
   <div style="font-weight:900;color:#111827">جاري الحفظ…</div>
 </div>
 
-<!-- Mobile FAB -->
-<button class="btn fab" id="fabAdd">+ مناسبة</button>
-
 <script type="module">
-  import { DEFAULT_LOCATION, APP_TITLE, TZ, ACCESS_TOKEN } from "./assets/config.js";
+  import { SUPABASE_URL, SUPABASE_ANON_KEY, ACCESS_TOKEN, TZ, DEFAULT_LOCATION, APP_TITLE } from "./assets/config.js";
   import {
-    supabase as sb,
-    pad2,
-    getMonthParam,
+    computeEndISO,
     monthLabel,
-    mealLabel,
-    formatTime12,
+    getMonthParam,
     formatGregorian,
     formatHijriUmmAlQura,
-    computeEndISO
+    formatTime12
   } from "./assets/app.js";
 
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
   const $ = (id) => document.getElementById(id);
+  const pad2 = (n) => String(n).padStart(2,"0");
 
   $("title").textContent = `لوحة الإدارة — ${APP_TITLE}`;
   $("loc").textContent = DEFAULT_LOCATION;
 
-  // ===== Toast =====
+  // Toast
   function toast(msg, kind=""){
     const el = document.createElement("div");
     el.className = "toast " + kind;
     el.textContent = msg;
     $("toastArea").appendChild(el);
-    setTimeout(() => el.remove(), 3000);
+    setTimeout(() => el.remove(), 2800);
   }
 
   function setStatus(kind, text){
@@ -355,58 +332,49 @@
     $("status").textContent = text;
   }
 
-  // ===== Tabs (mobile) =====
-  const tabsBar = $("tabsBar");
-  function showTab(tab){
-    // mobile behavior
-    const isMobile = window.matchMedia("(max-width: 720px)").matches;
-    if (!isMobile) return;
-
-    tabsBar.querySelectorAll(".tabBtn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
-    $("sec-members").classList.toggle("hidden", tab !== "members");
-    $("sec-meal").classList.toggle("hidden", tab !== "meal");
-    $("sec-month").classList.toggle("hidden", tab !== "month");
+  // Drawer
+  function openDrawer(){
+    $("drawerBackdrop").classList.add("show");
+    $("drawer").classList.add("show");
+  }
+  function closeDrawer(){
+    $("drawerBackdrop").classList.remove("show");
+    $("drawer").classList.remove("show");
   }
 
-  tabsBar.addEventListener("click", (e) => {
-    const btn = e.target.closest(".tabBtn");
-    if (!btn) return;
-    showTab(btn.dataset.tab);
-  });
+  $("drawerBackdrop").addEventListener("click", closeDrawer);
+  $("drawerClose").addEventListener("click", closeDrawer);
 
-  window.addEventListener("resize", () => {
-    // when switching to desktop, show everything
-    const isMobile = window.matchMedia("(max-width: 720px)").matches;
-    if (!isMobile){
-      $("sec-members").classList.remove("hidden");
-      $("sec-meal").classList.remove("hidden");
-      $("sec-month").classList.remove("hidden");
-    } else {
-      // keep current selected
-      const active = tabsBar.querySelector(".tabBtn.active")?.dataset.tab || "members";
-      showTab(active);
-    }
-  });
+  // Confirm modal
+  function confirmDelete({ title, text }){
+    return new Promise((resolve) => {
+      $("confirmTitle").textContent = title || "تأكيد";
+      $("confirmText").textContent = text || "هل أنت متأكد؟";
+      $("confirmModal").classList.add("show");
 
-  $("fabAdd").addEventListener("click", () => {
-    showTab("meal");
-    resetForm();
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  });
+      const yes = () => { cleanup(); resolve(true); };
+      const no  = () => { cleanup(); resolve(false); };
 
-  // ===== State =====
+      function cleanup(){
+        $("confirmModal").classList.remove("show");
+        $("confirmYes").removeEventListener("click", yes);
+        $("confirmNo").removeEventListener("click", no);
+      }
+
+      $("confirmYes").addEventListener("click", yes);
+      $("confirmNo").addEventListener("click", no);
+    });
+  }
+
+  // State
   let members = [];
-  let editingMealId = null;
   let selectedHostIds = new Set();
-  let mealsCache = []; // current month meals
+  let editingMealId = null;
 
-  const MEAL_ICON = { futoor:"🌅", ghada:"☀️", asha:"🌙", suhoor:"⭐" };
-
-  // ===== Auth =====
+  // Auth
   async function requireAdmin(){
     const { data:{ user } } = await sb.auth.getUser();
     if (!user){ location.href = "./login.html"; return null; }
-
     $("who").textContent = user.email || user.id;
 
     const { data, error } = await sb.rpc("is_admin");
@@ -414,12 +382,11 @@
       setStatus("warn","غير مصرح. تأكد أن بريدك ضمن قائمة الأدمن.");
       return null;
     }
-
     setStatus("ok","تم التحقق ✓ يمكنك التعديل.");
     return user;
   }
 
-  // ===== Members =====
+  // Members
   async function loadMembers(){
     const { data, error } = await sb.from("members").select("id, full_name, is_active").order("full_name");
     if (error){ $("membersList").textContent = error.message; return; }
@@ -437,33 +404,27 @@
     members.forEach(m => {
       const row = document.createElement("div");
       row.className = "member-row";
+      row.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);gap:12px;";
       row.innerHTML = `
         <div>
-          <div class="member-name">${m.full_name}</div>
-          <div class="member-status ${m.is_active ? 'status-active' : 'status-inactive'}">${m.is_active ? '● نشط' : '○ موقوف'}</div>
+          <div style="font-weight:900">${m.full_name}</div>
+          <div class="small" style="font-weight:800;color:${m.is_active ? '#166534' : 'var(--muted)'}">
+            ${m.is_active ? "● نشط" : "○ موقوف"}
+          </div>
         </div>
         <button class="btn secondary" style="font-size:13px;padding:8px 12px">${m.is_active ? "إيقاف" : "تفعيل"}</button>
       `;
       row.querySelector("button").onclick = async () => {
-        const { error } = await sb.from("members").update({ is_active:!m.is_active }).eq("id", m.id);
+        const { error } = await sb.from("members").update({ is_active: !m.is_active }).eq("id", m.id);
         if (error){ toast(error.message, "warn"); return; }
         toast(m.is_active ? `تم إيقاف ${m.full_name}` : `تم تفعيل ${m.full_name}`, "ok");
         await loadMembers();
+        await loadMonthTable(); // refresh names visibility
       };
       wrap.appendChild(row);
     });
     $("membersList").innerHTML = "";
     $("membersList").appendChild(wrap);
-  }
-
-  async function addMember(){
-    const name = ($("newMember").value || "").trim();
-    if (!name) return;
-    const { error } = await sb.from("members").insert({ full_name:name, is_active:true });
-    if (error){ toast(error.message, "warn"); return; }
-    $("newMember").value = "";
-    toast(`تم إضافة "${name}" ✓`, "ok");
-    await loadMembers();
   }
 
   function renderHostsPicker(){
@@ -479,9 +440,10 @@
       const label = document.createElement("label");
       label.className = "pill";
       label.setAttribute("for", id);
-      label.style.cursor = "pointer";
-      label.innerHTML = `<input type="checkbox" id="${id}" ${selectedHostIds.has(m.id) ? "checked" : ""}> <span>${m.full_name}</span>`;
-      label.querySelector("input").onchange = (e) => {
+      label.innerHTML = `<input type="checkbox" id="${id}"> <span>${m.full_name}</span>`;
+      const input = label.querySelector("input");
+      input.checked = selectedHostIds.has(m.id);
+      input.onchange = (e) => {
         if (e.target.checked) selectedHostIds.add(m.id);
         else selectedHostIds.delete(m.id);
       };
@@ -491,42 +453,69 @@
     $("hostsPicker").appendChild(wrap);
   }
 
-  // ===== Form =====
-  function showEditingBanner(label){
-    $("editingBanner").classList.add("show");
-    $("editingLabel").textContent = label;
-    $("deleteMeal").style.display = "inline-flex";
+  async function addMember(){
+    const name = ($("newMember").value || "").trim();
+    if (!name) return;
+    const { error } = await sb.from("members").insert({ full_name:name, is_active:true });
+    if (error){ toast(error.message, "warn"); return; }
+    $("newMember").value = "";
+    toast(`تم إضافة "${name}" ✓`, "ok");
+    await loadMembers();
   }
 
-  function hideEditingBanner(){
-    $("editingBanner").classList.remove("show");
-    $("deleteMeal").style.display = "none";
-  }
-
-  function resetForm(){
+  // Form helpers
+  function resetForm({ keepDrawerOpen=true } = {}){
     editingMealId = null;
     selectedHostIds = new Set();
     $("mealType").value = "asha";
     $("notes").value = "";
-    hideEditingBanner();
+    $("deleteMeal").style.display = "none";
+
+    const today = new Date();
+    $("date").value = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
+    $("startTime").value = "19:00";
+    $("endTime").value = "00:00";
+
+    $("drawerTitle").textContent = "إضافة مناسبة جديدة";
+    $("drawerSub").textContent = "املأ البيانات ثم اضغط حفظ";
+    $("drawerHint").textContent = "💡 نصيحة: وقت النهاية إذا كان أقل من البداية سيتم اعتباره اليوم التالي تلقائيًا.";
+
     renderHostsPicker();
+    $("waPublish").textContent = "📢 واتساب";
+    if (keepDrawerOpen) openDrawer();
   }
-  window.resetForm = resetForm;
 
-  $("cancelEditBtn").addEventListener("click", () => {
-    resetForm();
-    toast("تم إلغاء التعديل");
-  });
+  function fillFormFromMeal(row){
+    editingMealId = row.id;
 
+    $("mealType").value = row.meal;
+    $("notes").value = row.notes || "";
+    $("deleteMeal").style.display = "inline-flex";
+
+    // set date/time from ISO with TZ
+    const s = new Date(row.starts_at);
+    const e = new Date(row.ends_at);
+
+    $("date").value = new Intl.DateTimeFormat("en-CA", { timeZone:TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(s);
+    $("startTime").value = new Intl.DateTimeFormat("en-GB", { timeZone:TZ, hour:"2-digit", minute:"2-digit", hour12:false }).format(s);
+    $("endTime").value   = new Intl.DateTimeFormat("en-GB", { timeZone:TZ, hour:"2-digit", minute:"2-digit", hour12:false }).format(e);
+
+    const hostIds = (row.meal_hosts || []).map(x => x.member_id);
+    selectedHostIds = new Set(hostIds);
+    renderHostsPicker();
+
+    $("drawerTitle").textContent = "تعديل مناسبة";
+    $("drawerSub").textContent = `${formatGregorian(row.starts_at)} — ${formatTime12(row.starts_at)} إلى ${formatTime12(row.ends_at)}`;
+    $("drawerHint").textContent = "✏️ عدّل البيانات ثم اضغط حفظ. يمكنك الحذف من زر الحذف.";
+    openDrawer();
+  }
+
+  // Save / Delete
   async function saveMeal(){
     const d = $("date").value;
     if (!d){ toast("اختر التاريخ", "warn"); return; }
 
     const { startISO, endISO } = computeEndISO(d, $("startTime").value, $("endTime").value);
-
-    if (selectedHostIds.size === 0){
-      if (!confirm("لم يتم اختيار داعين. هل تريد الحفظ بدون داعين؟")) return;
-    }
 
     const payload = {
       meal: $("mealType").value,
@@ -550,7 +539,7 @@
         mealId = ins.data.id;
       }
 
-      // hosts: replace
+      // Update hosts
       const delRes = await sb.from("meal_hosts").delete().eq("meal_id", mealId);
       if (delRes.error){ toast("تعذر تحديث الداعين: " + delRes.error.message, "warn"); return; }
 
@@ -561,14 +550,10 @@
       }
 
       editingMealId = mealId;
-      showEditingBanner(`تعديل: ${mealLabel(payload.meal)} — ${formatGregorian(payload.starts_at)}`);
-
-      toast("تم الحفظ بنجاح ✓", "ok");
+      $("deleteMeal").style.display = "inline-flex";
+      toast("تم الحفظ ✓", "ok");
       setStatus("ok","تم الحفظ.");
-      await loadMonthData(); // refresh month lists
-
-      // mobile: jump to month tab for confirmation
-      showTab("month");
+      await loadMonthTable();
 
     } finally {
       $("savingOverlay").classList.remove("show");
@@ -578,33 +563,45 @@
 
   async function deleteMeal(){
     if (!editingMealId) return;
-    if (!confirm("تأكيد حذف هذه المناسبة؟ لا يمكن التراجع.")) return;
 
-    const res = await sb.from("meals").delete().eq("id", editingMealId);
-    if (res.error){ toast(res.error.message, "warn"); return; }
+    const ok = await confirmDelete({
+      title: "تأكيد الحذف",
+      text: "سيتم حذف المناسبة والداعين المرتبطين بها. لا يمكن التراجع."
+    });
+    if (!ok) return;
 
-    toast("تم الحذف.", "ok");
-    resetForm();
-    await loadMonthData();
-    showTab("month");
+    $("savingOverlay").classList.add("show");
+    try{
+      const res = await sb.from("meals").delete().eq("id", editingMealId);
+      if (res.error){ toast(res.error.message, "warn"); return; }
+      toast("تم الحذف.", "ok");
+      closeDrawer();
+      resetForm({ keepDrawerOpen:false });
+      await loadMonthTable();
+    } finally {
+      $("savingOverlay").classList.remove("show");
+    }
   }
 
-  // ===== Month =====
-  function buildMonthLink(month){
-    const base = window.location.origin + window.location.pathname.replace("admin.html","schedule.html");
-    return `${base}?month=${month}&access=${encodeURIComponent(ACCESS_TOKEN)}`;
-  }
-
-  async function loadMonthData(){
+  // Month table
+  async function loadMonthTable(){
     const month = $("monthPick").value || getMonthParam();
     $("monthPick").value = month;
     $("tableMonthLabel").textContent = `جدول ${monthLabel(month)}`;
-    $("waPublish").textContent = `📢 إشعار واتساب — ${monthLabel(month)}`;
+    $("waPublish").textContent = `📢 واتساب — ${monthLabel(month)}`;
 
     const start = `${month}-01T00:00:00+03:00`;
     const [yy, mm] = month.split("-").map(Number);
     const endDate = new Date(Date.UTC(yy, mm, 1));
     const end = `${endDate.getUTCFullYear()}-${pad2(endDate.getUTCMonth()+1)}-${pad2(endDate.getUTCDate())}T00:00:00+03:00`;
+
+    $("monthTableWrap").innerHTML = `
+      <div style="padding:16px">
+        <div class="skeleton" style="height:14px;border-radius:10px;margin-top:10px"></div>
+        <div class="skeleton" style="height:14px;border-radius:10px;margin-top:10px;width:80%"></div>
+        <div class="skeleton" style="height:14px;border-radius:10px;margin-top:10px;width:65%"></div>
+      </div>
+    `;
 
     const res = await sb.from("meals")
       .select("id, meal, starts_at, ends_at, notes, meal_hosts(member_id)")
@@ -612,134 +609,86 @@
       .lt("starts_at", end)
       .order("starts_at", { ascending:true });
 
-    if (res.error){
-      $("monthTableWrap").querySelector(".monthDesktop").textContent = res.error.message;
-      $("monthTableWrap").querySelector(".monthMobile").textContent = res.error.message;
-      return;
-    }
+    if (res.error){ $("monthTableWrap").textContent = res.error.message; return; }
 
-    mealsCache = res.data || [];
-    renderMonthDesktopTable(mealsCache);
-    renderMonthMobileCards(mealsCache);
-  }
-
-  function renderMonthDesktopTable(meals){
-    const root = $("monthTableWrap").querySelector(".monthDesktop");
-
+    const meals = res.data || [];
     if (!meals.length){
-      root.innerHTML = `<div style="padding:30px;text-align:center;color:var(--muted)">📭 لا توجد مناسبات لهذا الشهر.</div>`;
+      $("monthTableWrap").innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted)">📭 لا توجد مناسبات لهذا الشهر.</div>`;
       return;
     }
 
     const table = document.createElement("table");
     table.className = "table";
     table.innerHTML = `<thead><tr>
-      <th>النوع</th><th>التاريخ</th><th>الوقت</th><th>الداعون</th><th>ملاحظات</th>
+      <th>النوع</th><th>التاريخ</th><th>الوقت</th><th>الداعون</th><th>إجراءات</th>
     </tr></thead>`;
 
     const tbody = document.createElement("tbody");
 
     meals.forEach(r => {
-      const hostIds   = (r.meal_hosts || []).map(x => x.member_id);
-      const hostNames = hostIds.map(id => members.find(m => m.id === id)?.full_name).filter(Boolean);
+      const hostIds = (r.meal_hosts || []).map(x => x.member_id);
+      const hostNames = hostIds
+        .map(id => members.find(m => m.id === id)?.full_name)
+        .filter(Boolean);
 
       const tr = document.createElement("tr");
       tr.className = `row-${r.meal}`;
-      tr.style.cursor = "pointer";
+
       tr.innerHTML = `
-        <td><b>${MEAL_ICON[r.meal] || "🍽️"} ${mealLabel(r.meal)}</b></td>
+        <td><b>${r.meal}</b></td>
         <td>
-          <div style="font-weight:800">${formatGregorian(r.starts_at)}</div>
-          <div class="small">الموافق ${formatHijriUmmAlQura(r.starts_at)}</div>
+          <div style="font-weight:900">${formatGregorian(r.starts_at)}</div>
+          <div class="small">${formatHijriUmmAlQura(r.starts_at)}</div>
         </td>
-        <td style="white-space:nowrap">${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}</td>
+        <td style="white-space:nowrap">
+          ${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}
+        </td>
         <td>${hostNames.join(" – ") || "<span class='small'>—</span>"}</td>
-        <td class="small">${r.notes || "—"}</td>
+        <td>
+          <div class="rowActions">
+            <button class="iconBtn" data-act="edit">✏️ تعديل</button>
+            <button class="iconBtn danger" data-act="del">🗑 حذف</button>
+          </div>
+        </td>
       `;
 
-      tr.onclick = () => openMealForEdit(r);
+      // Actions
+      tr.querySelector('[data-act="edit"]').onclick = () => fillFormFromMeal(r);
+
+      tr.querySelector('[data-act="del"]').onclick = async () => {
+        editingMealId = r.id;
+        const ok = await confirmDelete({
+          title: "تأكيد الحذف",
+          text: `حذف ${formatGregorian(r.starts_at)} (${r.meal}) ؟`
+        });
+        if (!ok) return;
+
+        $("savingOverlay").classList.add("show");
+        try{
+          const resD = await sb.from("meals").delete().eq("id", r.id);
+          if (resD.error){ toast(resD.error.message, "warn"); return; }
+          toast("تم الحذف.", "ok");
+          await loadMonthTable();
+          // إذا كانت اللوحة مفتوحة لنفس المناسبة أقفلها
+          if (editingMealId === r.id) closeDrawer();
+        } finally {
+          $("savingOverlay").classList.remove("show");
+        }
+      };
+
       tbody.appendChild(tr);
     });
 
     table.appendChild(tbody);
-    root.innerHTML = "";
-    root.appendChild(table);
+    $("monthTableWrap").innerHTML = "";
+    $("monthTableWrap").appendChild(table);
   }
 
-  function renderMonthMobileCards(meals){
-    const root = $("monthTableWrap").querySelector(".monthMobile");
-
-    if (!meals.length){
-      root.innerHTML = `<div style="padding:22px;text-align:center;color:var(--muted)">📭 لا توجد مناسبات لهذا الشهر.</div>`;
-      return;
-    }
-
-    root.innerHTML = "";
-    meals.forEach(r => {
-      const hostIds   = (r.meal_hosts || []).map(x => x.member_id);
-      const hostNames = hostIds.map(id => members.find(m => m.id === id)?.full_name).filter(Boolean);
-
-      const card = document.createElement("div");
-      card.className = "mealRowCard";
-      card.innerHTML = `
-        <div class="mealRowTop">
-          <div>
-            <div class="mealRowTitle">${MEAL_ICON[r.meal] || "🍽️"} ${mealLabel(r.meal)}</div>
-            <div class="mealRowMeta">
-              <div>📅 <b style="color:#0f172a">${formatGregorian(r.starts_at)}</b></div>
-              <div>🕌 الموافق ${formatHijriUmmAlQura(r.starts_at)}</div>
-              <div>⏰ ${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}</div>
-            </div>
-          </div>
-          <span class="mealRowTag">✏️ تعديل</span>
-        </div>
-
-        <div class="mealRowHosts">👥 ${hostNames.join(" – ") || "—"}</div>
-        <div class="mealRowNote">📝 ${r.notes || "—"}</div>
-      `;
-
-      card.onclick = () => openMealForEdit(r);
-      root.appendChild(card);
-    });
+  function buildMonthLink(month){
+    const base = window.location.origin + window.location.pathname.replace("admin.html","schedule.html");
+    return `${base}?month=${month}&access=${encodeURIComponent(ACCESS_TOKEN)}`;
   }
 
-  function openMealForEdit(r){
-    editingMealId = r.id;
-    $("deleteMeal").style.display = "inline-flex";
-
-    const s = new Date(r.starts_at);
-    const e = new Date(r.ends_at);
-
-    $("mealType").value = r.meal;
-
-    // date in TZ
-    $("date").value = new Intl.DateTimeFormat("en-CA", {
-      timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit"
-    }).format(s);
-
-    // time in TZ
-    $("startTime").value = new Intl.DateTimeFormat("en-GB", {
-      timeZone: TZ, hour:"2-digit", minute:"2-digit", hour12:false
-    }).format(s);
-
-    $("endTime").value = new Intl.DateTimeFormat("en-GB", {
-      timeZone: TZ, hour:"2-digit", minute:"2-digit", hour12:false
-    }).format(e);
-
-    $("notes").value = r.notes || "";
-
-    const hostIds = (r.meal_hosts || []).map(x => x.member_id);
-    selectedHostIds = new Set(hostIds);
-    renderHostsPicker();
-
-    showEditingBanner(`تعديل: ${mealLabel(r.meal)} — ${formatGregorian(r.starts_at)}`);
-
-    // mobile: go to meal tab
-    showTab("meal");
-    window.scrollTo({ top:0, behavior:"smooth" });
-  }
-
-  // ===== WhatsApp publish =====
   function publishWhatsApp(){
     const month = $("monthPick").value || getMonthParam();
     const link = buildMonthLink(month);
@@ -747,7 +696,7 @@
     window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
   }
 
-  // ===== Events =====
+  // Events
   $("logout").addEventListener("click", async () => {
     await sb.auth.signOut();
     location.href = "./login.html";
@@ -756,33 +705,28 @@
   $("addMember").addEventListener("click", addMember);
   $("newMember").addEventListener("keydown", e => { if (e.key === "Enter") addMember(); });
 
-  $("resetForm").addEventListener("click", resetForm);
+  $("reloadMonth").addEventListener("click", loadMonthTable);
+  $("monthPick").addEventListener("change", loadMonthTable);
+
+  $("newMealBtn").addEventListener("click", () => resetForm({ keepDrawerOpen:true }));
+  $("clearForm").addEventListener("click", () => resetForm({ keepDrawerOpen:true }));
   $("saveMeal").addEventListener("click", saveMeal);
   $("deleteMeal").addEventListener("click", deleteMeal);
-
-  $("reloadMonth").addEventListener("click", loadMonthData);
-  $("monthPick").addEventListener("change", loadMonthData);
   $("waPublish").addEventListener("click", publishWhatsApp);
 
-  // ===== Init =====
+  // Init
   (async () => {
     const user = await requireAdmin();
     if (!user) return;
 
-    // default date
-    const today = new Date();
-    $("date").value = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
-
-    // month
     const month = getMonthParam();
     $("monthPick").value = month;
 
     await loadMembers();
-    await loadMonthData();
-    resetForm();
+    await loadMonthTable();
 
-    // mobile: start at members tab
-    showTab("members");
+    // جاهز: افتح الدروير فقط عند الضغط على + مناسبة
+    resetForm({ keepDrawerOpen:false });
   })();
 </script>
 </body>
