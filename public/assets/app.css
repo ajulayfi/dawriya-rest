@@ -1,566 +1,534 @@
-<!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>لوحة الإدارة — دورية الاستراحة</title>
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap');
 
-  <link rel="stylesheet" href="./assets/app.css"/>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
+:root{
+  --bg:#f4f6fb;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:#e5e7eb;
+  --shadow:0 8px 32px rgba(15,23,42,.07);
+  --radius:18px;
+  --focus: 0 0 0 4px rgba(99,102,241,.15);
+  --btn:#111827;
+  --btnText:#fff;
+  --gold:#b8860b;
+  --gold-lt:#fef9ee;
+  --accent:#2563eb;
 
-<body>
-<div class="container">
+  /* Meal colors */
+  --futoor:#16a34a;
+  --ghada:#f59e0b;
+  --asha:#2563eb;
+  --suhoor:#7c3aed;
+}
 
-  <div class="header">
-    <div class="title">
-      <h1 id="title">لوحة الإدارة</h1>
-      <div class="sub">إدارة الأعضاء + جدول الشهر — تعديل وحذف عملي</div>
-    </div>
-    <div class="toolbar">
-      <span id="who" class="badge">—</span>
-      <a class="btn secondary" href="./schedule.html" target="_blank">👁 عرض الجدول</a>
-      <button id="newMealBtn" class="btn">+ مناسبة</button>
-      <button id="logout" class="btn secondary">خروج</button>
-    </div>
-  </div>
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:'Tajawal', system-ui, -apple-system, "IBM Plex Sans Arabic", Arial, sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  -webkit-font-smoothing:antialiased;
+}
 
-  <div id="status" class="notice">جارٍ التحقق…</div>
+a{color:inherit;text-decoration:none}
 
-  <div class="grid2" style="margin-top:14px">
+/* ===== Layout ===== */
+.container{max-width:980px;margin:0 auto;padding:20px}
 
-    <!-- Members -->
-    <div class="card">
-      <div style="font-weight:900;font-size:15px;margin-bottom:4px">الأعضاء</div>
-      <div class="small" style="margin-bottom:14px">أضف وفعّل وأوقف الأعضاء</div>
+/* ===== Header ===== */
+.header{
+  display:flex;gap:12px;
+  align-items:flex-end;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  margin:8px 0 16px;
+  padding-bottom:16px;
+  border-bottom:1px solid var(--line);
+}
+.title{display:flex;flex-direction:column;gap:4px}
+.title h1{
+  margin:0;
+  font-size:22px;
+  font-weight:900;
+  letter-spacing:-.2px;
+  background:linear-gradient(135deg, #0f172a 60%, #475569);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.title .sub{color:var(--muted);font-size:13px}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 
-      <div style="display:flex;gap:10px;align-items:center">
-        <input id="newMember" class="input" placeholder="اسم العضو الجديد" style="flex:1 1 180px"/>
-        <button id="addMember" class="btn" style="white-space:nowrap">+ إضافة</button>
-      </div>
+/* ===== Cards ===== */
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  box-shadow:var(--shadow);
+  border-radius:var(--radius);
+  padding:16px;
+  transition:box-shadow .2s;
+}
+.card:hover{box-shadow:0 12px 40px rgba(15,23,42,.1)}
 
-      <div class="hr"></div>
-      <div id="membersList" class="small" style="min-height:60px">—</div>
-    </div>
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.col{flex:1 1 320px}
 
-    <!-- Month table -->
-    <div class="card">
-      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
-        <div>
-          <div style="font-weight:900;font-size:15px" id="tableMonthLabel">جدول الشهر</div>
-          <div class="small">استخدم الأزرار داخل كل صف</div>
-        </div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <input id="monthPick" class="input" type="month" style="width:160px"/>
-          <button id="reloadMonth" class="btn secondary">تحديث</button>
-        </div>
-      </div>
+/* ===== Forms ===== */
+label{
+  display:block;
+  font-size:12px;
+  font-weight:700;
+  color:var(--muted);
+  margin:10px 0 6px;
+  letter-spacing:.02em
+}
+.input{
+  width:100%;
+  padding:11px 14px;
+  border:1.5px solid var(--line);
+  border-radius:12px;
+  outline:none;
+  font-size:15px;
+  font-family:inherit;
+  background:#fff;
+  color:var(--text);
+  transition:border-color .2s, box-shadow .2s;
+}
+.input:focus{box-shadow:var(--focus);border-color:rgba(99,102,241,.4)}
+.input::placeholder{color:#cbd5e1}
 
-      <div class="hr"></div>
-      <div id="monthTableWrap" style="overflow-x:auto">—</div>
-      <div class="small" style="margin-top:10px">📍 <b id="loc">—</b></div>
-    </div>
+/* ===== Buttons ===== */
+.btn{
+  appearance:none;
+  border:0;
+  background:var(--btn);
+  color:var(--btnText);
+  padding:11px 16px;
+  border-radius:12px;
+  cursor:pointer;
+  font-size:14px;
+  font-family:inherit;
+  font-weight:700;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  transition:opacity .15s, transform .1s, box-shadow .15s;
+  box-shadow:0 2px 8px rgba(0,0,0,.12);
+}
+.btn:hover{opacity:.9;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.btn:active{transform:translateY(1px);box-shadow:none}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 
-  </div>
+.btn.secondary{
+  background:#fff;
+  color:#111827;
+  border:1.5px solid var(--line);
+  box-shadow:none;
+}
+.btn.secondary:hover{border-color:#94a3b8;background:#f8fafc}
 
-</div>
+.btn.danger{background:#b91c1c;color:#fff}
+.btn.danger:hover{background:#991b1b}
 
-<!-- Drawer / BottomSheet -->
-<div class="drawerBackdrop" id="drawerBackdrop"></div>
-<div class="drawer" id="drawer">
-  <div class="sheetHandle"></div>
+/* ===== Notices ===== */
+.notice{
+  padding:11px 14px;
+  border-radius:14px;
+  border:1.5px solid var(--line);
+  background:#fff;
+  color:var(--muted);
+  font-size:13px;
+  font-weight:500;
+}
+.notice.warn{border-color:rgba(245,158,11,.4);background:rgba(254,249,195,.5);color:#92400e}
+.notice.ok{border-color:rgba(34,197,94,.4);background:rgba(220,252,231,.5);color:#166534}
 
-  <div class="drawerHeader">
-    <div>
-      <div class="drawerTitle" id="drawerTitle">—</div>
-      <div class="small" id="drawerSub">—</div>
-    </div>
-    <button class="drawerClose" id="drawerClose">✕</button>
-  </div>
+/* ===== Badge ===== */
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 12px;
+  border-radius:999px;
+  border:1.5px solid var(--line);
+  background:#fff;
+  font-size:12px;
+  font-weight:600;
+  color:var(--muted);
+}
 
-  <div class="drawerBody">
-    <div class="form-grid">
-      <div>
-        <label>النوع</label>
-        <select id="mealType" class="input">
-          <option value="futoor">🌅 فطور</option>
-          <option value="ghada">☀️ غدا</option>
-          <option value="asha">🌙 عشا</option>
-          <option value="suhoor">⭐ سحور</option>
-        </select>
-      </div>
+/* ===== HR ===== */
+.hr{height:1px;background:var(--line);margin:14px 0}
 
-      <div>
-        <label>التاريخ</label>
-        <input id="date" class="input" type="date"/>
-      </div>
+/* ===== Small / Utilities ===== */
+.small{font-size:12px;color:var(--muted);line-height:1.6}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:720px){.grid2{grid-template-columns:1fr}}
+.kbd{
+  font-family:ui-monospace, Menlo, Monaco, Consolas, monospace;
+  background:rgba(148,163,184,.15);
+  border:1px solid rgba(148,163,184,.25);
+  padding:2px 7px;
+  border-radius:6px;
+  font-size:12px;
+}
 
-      <div>
-        <label>من</label>
-        <input id="startTime" class="input" type="time" value="19:00"/>
-      </div>
+/* =========================================
+   Schedule: Sticky Bar + Chips
+   ========================================= */
+.stickyBar{
+  position:sticky;
+  top:10px;
+  z-index:30;
+  background:rgba(244,246,251,.92);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border:1.5px solid var(--line);
+  border-radius:16px;
+  padding:10px 14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+  margin:10px 0 14px;
+}
 
-      <div>
-        <label>إلى</label>
-        <input id="endTime" class="input" type="time" value="00:00"/>
-      </div>
-    </div>
+.chips{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+}
 
-    <label>ملاحظات (اختياري)</label>
-    <textarea id="notes" class="input" rows="2" placeholder="مثال: كل واحد يجيب شيء…"></textarea>
+.chip{
+  appearance:none;
+  border:1.5px solid var(--line);
+  background:#fff;
+  color:var(--muted);
+  padding:8px 12px;
+  border-radius:999px;
+  cursor:pointer;
+  font-family:inherit;
+  font-size:13px;
+  font-weight:800;
+  line-height:1;
+  transition:background .15s, border-color .15s, color .15s, transform .1s;
+  user-select:none;
+}
+.chip:hover{background:#f8fafc;border-color:#94a3b8;color:var(--text)}
+.chip:active{transform:translateY(1px)}
+.chip.active{
+  background:#111827;
+  border-color:#111827;
+  color:#fff;
+  box-shadow:0 2px 10px rgba(0,0,0,.12);
+}
 
-    <div class="hr"></div>
+/* =========================================
+   Next Banner
+   ========================================= */
+.nextBanner{
+  border:1.5px solid rgba(34,197,94,.4);
+  background:rgba(220,252,231,.5);
+  color:#166534;
+  border-radius:16px;
+  padding:12px 14px;
+  margin-bottom:14px;
+  font-size:14px;
+}
+.nextBanner b{color:#0f172a}
 
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-      <div style="font-weight:900">الداعون</div>
-      <div class="small">يظهرون فقط إذا كانوا مفعّلين</div>
-    </div>
+/* =========================================
+   Meal Cards (Schedule)
+   ========================================= */
+.cardsGrid{display:grid;gap:14px}
 
-    <div id="hostsPicker" class="small" style="margin-top:10px">—</div>
-    <div class="hr"></div>
-    <div class="small" id="drawerHint">—</div>
-  </div>
+.mealCard{
+  position:relative;
+  padding:14px 14px 14px 20px;
+  overflow:hidden;
+  border:1.5px solid var(--line);
+  border-radius:16px;
+  background:#fff;
+  box-shadow:0 2px 10px rgba(15,23,42,.04);
+  transition:box-shadow .2s, transform .15s, border-color .2s, background .2s;
+}
+.mealCard:hover{
+  box-shadow:0 8px 28px rgba(15,23,42,.09);
+  transform:translateY(-1px);
+}
+.mealCard::before{
+  content:"";
+  position:absolute;
+  inset-inline-start:0;
+  top:0;bottom:0;
+  width:5px;
+  border-radius:3px 0 0 3px;
+  background:var(--line);
+}
+.mealCard[data-meal="futoor"]::before{background:var(--futoor)}
+.mealCard[data-meal="ghada"]::before{background:var(--ghada)}
+.mealCard[data-meal="asha"]::before{background:var(--asha)}
+.mealCard[data-meal="suhoor"]::before{background:var(--suhoor)}
 
-  <div class="drawerFooter">
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-      <button id="saveMeal" class="btn">💾 حفظ</button>
-      <button id="clearForm" class="btn secondary">تفريغ</button>
-    </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-      <button id="deleteMeal" class="btn danger" style="display:none">🗑 حذف</button>
-      <button id="waPublish" class="btn secondary">📢 واتساب</button>
-    </div>
-  </div>
-</div>
+.mealTop{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
 
-<!-- Confirm modal -->
-<div class="modal" id="confirmModal">
-  <div class="modalCard">
-    <div style="font-weight:900;font-size:15px" id="confirmTitle">تأكيد</div>
-    <div class="small" style="margin-top:6px" id="confirmText">—</div>
-    <div class="modalActions">
-      <button class="btn danger" id="confirmYes">نعم، احذف</button>
-      <button class="btn secondary" id="confirmNo">إلغاء</button>
-    </div>
-  </div>
-</div>
+.mealName{font-weight:900;font-size:16px}
+.mealMeta{
+  color:var(--muted);
+  font-size:13px;
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  margin-top:6px;
+  line-height:1.7;
+}
 
-<!-- Toast -->
-<div class="toast-area" id="toastArea"></div>
+.actionsCol{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  min-width:170px;
+}
+@media (max-width:720px){.actionsCol{min-width:unset}}
 
-<!-- Saving overlay -->
-<div class="saving-overlay" id="savingOverlay">
-  <div class="save-spinner"></div>
-  <div style="font-weight:900;color:#111827">جاري الحفظ…</div>
-</div>
+.pastCard{opacity:.45;filter:grayscale(.2)}
 
-<script type="module">
-  import { DEFAULT_LOCATION, APP_TITLE, ACCESS_TOKEN, TZ } from "./assets/config.js";
-  import {
-    sb,
-    toast,
-    lockScroll,
-    computeEndISO,
-    monthLabel,
-    getMonthParam,
-    formatGregorian,
-    formatHijriUmmAlQura,
-    formatTime12
-  } from "./assets/app.js";
+/* Past section (accordion) */
+details.pastDetails{
+  border:1px solid var(--line,#e5e7eb);
+  border-radius:16px;
+  background:#fff;
+  padding:10px 12px;
+  margin-top:14px;
+}
+details.pastDetails summary{
+  cursor:pointer;
+  list-style:none;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  user-select:none;
+  font-weight:900;
+}
+details.pastDetails summary::-webkit-details-marker{display:none}
+.summaryHint{color:var(--muted,#64748b);font-weight:700;font-size:12px}
 
-  const $ = (id) => document.getElementById(id);
-  const pad2 = (n) => String(n).padStart(2,"0");
+/* Hosts block */
+.hostsBlock{
+  margin-top:12px;
+  padding:10px 12px;
+  border:1.5px dashed var(--line);
+  border-radius:14px;
+  background:rgba(2,6,23,.02);
+}
+.hostsTitle{
+  font-size:11px;
+  font-weight:900;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  margin-bottom:5px;
+}
+.hostsNames{
+  font-size:14px;
+  font-weight:800;
+  line-height:1.7;
+  color:#0f172a;
+}
 
-  $("title").textContent = `لوحة الإدارة — ${APP_TITLE}`;
-  $("loc").textContent = DEFAULT_LOCATION;
+/* =========================================
+   Table (Admin)
+   ========================================= */
+.table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  font-size:14px;
+  overflow:hidden;
+  border-radius:14px;
+  border:1.5px solid var(--line)
+}
+.table th,.table td{
+  text-align:start;
+  padding:11px 14px;
+  border-bottom:1px solid var(--line);
+  vertical-align:top
+}
+.table th{
+  color:var(--muted);
+  font-weight:800;
+  font-size:12px;
+  background:#f8fafc;
+  letter-spacing:.04em
+}
+.table tr:last-child td{border-bottom:none}
+.table tbody tr:hover{background:#f8fafc;cursor:pointer}
+.table tbody tr.editing-row{
+  background:rgba(99,102,241,.04);
+  outline:2px solid rgba(99,102,241,.3);
+  outline-offset:-1px
+}
 
-  function setStatus(kind, text){
-    $("status").className = kind ? `notice ${kind}` : "notice";
-    $("status").textContent = text;
+/* =========================================
+   Pill (Hosts picker / Tags)
+   ========================================= */
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  border:1.5px solid var(--line);
+  background:#fff;
+  transition:all .15s;
+  cursor:pointer;
+  font-size:14px;
+  font-weight:700;
+  user-select:none;
+}
+.pill:hover{border-color:#94a3b8;background:#f8fafc}
+.pill:has(input:checked){
+  border-color:var(--accent);
+  background:rgba(37,99,235,.06);
+  color:var(--accent);
+}
+.pill input[type="checkbox"]{accent-color:var(--accent);width:15px;height:15px}
+
+/* =========================================
+   Login extras (if used)
+   ========================================= */
+.loginWrap{max-width:520px;margin:28px auto 0}
+.loginTop{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.loginTitle h1{margin:0}
+.loginTitle .sub{margin-top:6px}
+.metaLine{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.metaPill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 12px;border-radius:999px;
+  border:1.5px solid var(--line);
+  background:rgba(255,255,255,.8);
+  color:var(--muted);
+  font-size:12px;font-weight:800;
+}
+.pwRow{position:relative}
+.pwToggle{
+  position:absolute;inset-inline-start:12px;top:50%;
+  transform:translateY(-50%);
+  border:1px solid var(--line);
+  background:#fff;border-radius:999px;
+  padding:5px 10px;font-size:12px;font-weight:900;cursor:pointer;
+  font-family:inherit;
+}
+.pwRow .input{padding-inline-start:92px}
+.footerNote{margin-top:14px;color:var(--muted);font-size:12px;line-height:1.7}
+
+/* =========================================
+   Skeleton Loading (Shimmer) — Pro
+   (Used by schedule.html via skeletonMealsHTML)
+   ========================================= */
+.skeleton{
+  position: relative;
+  overflow: hidden;
+  background: #eef2f7;
+  border-radius: 12px;
+}
+.skeleton::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background: linear-gradient(90deg,
+    rgba(238,242,247,0) 0%,
+    rgba(255,255,255,.9) 50%,
+    rgba(238,242,247,0) 100%
+  );
+  transform: translateX(-100%);
+  animation: shimmer 1.25s ease-in-out infinite;
+}
+@keyframes shimmer{ to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce){
+  .skeleton::after{ animation:none; }
+}
+
+.skel-card{
+  border: 1px solid var(--line, #e5e7eb);
+  background: #fff;
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: var(--shadow, 0 22px 60px rgba(15,23,42,.08));
+}
+.skel-row{
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  justify-content:space-between;
+}
+.skel-left{flex:1 1 auto;min-width:0}
+.skel-actions{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  min-width:170px;
+}
+@media (max-width:720px){
+  .skel-actions{ min-width: unset; }
+}
+.skel-line{ height: 12px; border-radius: 10px; margin-top: 10px; }
+.skel-title{ height: 18px; border-radius: 10px; width: 55%; }
+.skel-chip{ height: 28px; width: 96px; border-radius: 999px; }
+.skel-btn{ height: 38px; border-radius: 12px; }
+.skel-hosts{
+  margin-top: 14px;
+  border-top: 1px solid var(--line, #e5e7eb);
+  padding-top: 12px;
+}
+
+/* =========================================
+   Mobile polish (Schedule + General)
+   ========================================= */
+@media (max-width:720px){
+  .container{padding:14px}
+
+  .btn{justify-content:center}
+
+  .stickyBar{top:8px}
+  .actionsCol .btn{width:100%}
+
+  /* Make chips easier to scroll on very small screens */
+  .chips{
+    gap:8px;
+    overflow:auto;
+    padding-bottom:2px;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;
   }
+  .chips::-webkit-scrollbar{height:6px}
+  .chips::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:999px}
 
-  // Drawer helpers
-  function openDrawer(){
-    lockScroll(true);
-    $("drawerBackdrop").classList.add("show");
-    $("drawer").classList.add("show");
+  /* Meal card layout */
+  .mealTop{flex-direction:column;align-items:stretch}
+  .actionsCol{flex-direction:row;flex-wrap:wrap}
+  .actionsCol .btn{flex:1 1 160px}
+}
+
+/* Desktop: reduce sticky effect to feel lighter */
+@media (min-width:721px){
+  .stickyBar{
+    position:static;
+    backdrop-filter:none;
+    background:transparent;
+    border:0;
+    padding:0;
+    margin:8px 0 14px;
   }
-  function closeDrawer(){
-    lockScroll(false);
-    $("drawerBackdrop").classList.remove("show");
-    $("drawer").classList.remove("show");
-  }
-
-  $("drawerBackdrop").addEventListener("click", closeDrawer);
-  $("drawerClose").addEventListener("click", closeDrawer);
-
-  // Confirm modal
-  function confirmDelete({ title, text }){
-    return new Promise((resolve) => {
-      $("confirmTitle").textContent = title || "تأكيد";
-      $("confirmText").textContent = text || "هل أنت متأكد؟";
-      $("confirmModal").classList.add("show");
-
-      const yes = () => { cleanup(); resolve(true); };
-      const no  = () => { cleanup(); resolve(false); };
-
-      function cleanup(){
-        $("confirmModal").classList.remove("show");
-        $("confirmYes").removeEventListener("click", yes);
-        $("confirmNo").removeEventListener("click", no);
-      }
-
-      $("confirmYes").addEventListener("click", yes);
-      $("confirmNo").addEventListener("click", no);
-    });
-  }
-
-  // State
-  let members = [];
-  let selectedHostIds = new Set();
-  let editingMealId = null;
-
-  // Auth
-  async function requireAdmin(){
-    const { data:{ user } } = await sb.auth.getUser();
-    if (!user){ location.href = "./login.html"; return null; }
-    $("who").textContent = user.email || user.id;
-
-    const { data, error } = await sb.rpc("is_admin");
-    if (error || !data){
-      setStatus("warn","غير مصرح. تأكد أن بريدك ضمن قائمة الأدمن.");
-      return null;
-    }
-    setStatus("ok","تم التحقق ✓ يمكنك التعديل.");
-    return user;
-  }
-
-  // Members
-  async function loadMembers(){
-    const { data, error } = await sb.from("members").select("id, full_name, is_active").order("full_name");
-    if (error){ $("membersList").textContent = error.message; return; }
-    members = data || [];
-    renderMembers();
-    renderHostsPicker();
-  }
-
-  function renderMembers(){
-    if (!members.length){
-      $("membersList").textContent = "لا يوجد أعضاء بعد.";
-      return;
-    }
-    const wrap = document.createElement("div");
-    members.forEach(m => {
-      const row = document.createElement("div");
-      row.className = "member-row";
-      row.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);gap:12px;";
-      row.innerHTML = `
-        <div>
-          <div style="font-weight:900">${m.full_name}</div>
-          <div class="small" style="font-weight:800;color:${m.is_active ? '#166534' : 'var(--muted)'}">
-            ${m.is_active ? "● نشط" : "○ موقوف"}
-          </div>
-        </div>
-        <button class="btn secondary" style="font-size:13px;padding:8px 12px">${m.is_active ? "إيقاف" : "تفعيل"}</button>
-      `;
-      row.querySelector("button").onclick = async () => {
-        const { error } = await sb.from("members").update({ is_active: !m.is_active }).eq("id", m.id);
-        if (error){ toast($("toastArea"), error.message, "warn"); return; }
-        toast($("toastArea"), m.is_active ? `تم إيقاف ${m.full_name}` : `تم تفعيل ${m.full_name}`, "ok");
-        await loadMembers();
-        await loadMonthTable();
-      };
-      wrap.appendChild(row);
-    });
-    $("membersList").innerHTML = "";
-    $("membersList").appendChild(wrap);
-  }
-
-  function renderHostsPicker(){
-    const active = members.filter(m => !!m.is_active);
-    if (!active.length){
-      $("hostsPicker").textContent = "لا يوجد أعضاء مفعّلين.";
-      return;
-    }
-    const wrap = document.createElement("div");
-    wrap.className = "hosts-wrap";
-    active.forEach(m => {
-      const id = `host_${m.id}`;
-      const label = document.createElement("label");
-      label.className = "pill";
-      label.setAttribute("for", id);
-      label.innerHTML = `<input type="checkbox" id="${id}"> <span>${m.full_name}</span>`;
-      const input = label.querySelector("input");
-      input.checked = selectedHostIds.has(m.id);
-      input.onchange = (e) => {
-        if (e.target.checked) selectedHostIds.add(m.id);
-        else selectedHostIds.delete(m.id);
-      };
-      wrap.appendChild(label);
-    });
-    $("hostsPicker").innerHTML = "";
-    $("hostsPicker").appendChild(wrap);
-  }
-
-  async function addMember(){
-    const name = ($("newMember").value || "").trim();
-    if (!name) return;
-    const { error } = await sb.from("members").insert({ full_name:name, is_active:true });
-    if (error){ toast($("toastArea"), error.message, "warn"); return; }
-    $("newMember").value = "";
-    toast($("toastArea"), `تم إضافة "${name}" ✓`, "ok");
-    await loadMembers();
-  }
-
-  // Form
-  function resetForm({ open=true } = {}){
-    editingMealId = null;
-    selectedHostIds = new Set();
-
-    $("mealType").value = "asha";
-    $("notes").value = "";
-    $("deleteMeal").style.display = "none";
-
-    const today = new Date();
-    $("date").value = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
-    $("startTime").value = "19:00";
-    $("endTime").value = "00:00";
-
-    $("drawerTitle").textContent = "إضافة مناسبة جديدة";
-    $("drawerSub").textContent = "املأ البيانات ثم اضغط حفظ";
-    $("drawerHint").textContent = "💡 إذا كانت النهاية أقل من البداية: سيتم اعتبارها اليوم التالي تلقائيًا.";
-    renderHostsPicker();
-
-    if (open) openDrawer();
-  }
-
-  function fillFormFromMeal(row){
-    editingMealId = row.id;
-
-    $("mealType").value = row.meal;
-    $("notes").value = row.notes || "";
-    $("deleteMeal").style.display = "inline-flex";
-
-    const s = new Date(row.starts_at);
-    const e = new Date(row.ends_at);
-
-    $("date").value = new Intl.DateTimeFormat("en-CA", { timeZone:TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(s);
-    $("startTime").value = new Intl.DateTimeFormat("en-GB", { timeZone:TZ, hour:"2-digit", minute:"2-digit", hour12:false }).format(s);
-    $("endTime").value   = new Intl.DateTimeFormat("en-GB", { timeZone:TZ, hour:"2-digit", minute:"2-digit", hour12:false }).format(e);
-
-    selectedHostIds = new Set((row.meal_hosts || []).map(x => x.member_id));
-    renderHostsPicker();
-
-    $("drawerTitle").textContent = "تعديل مناسبة";
-    $("drawerSub").textContent = `${formatGregorian(row.starts_at)} — ${formatTime12(row.starts_at)} إلى ${formatTime12(row.ends_at)}`;
-    $("drawerHint").textContent = "✏️ عدّل ثم احفظ. يمكنك الحذف من زر الحذف.";
-    openDrawer();
-  }
-
-  async function saveMeal(){
-    const d = $("date").value;
-    if (!d){ toast($("toastArea"), "اختر التاريخ", "warn"); return; }
-
-    const { startISO, endISO } = computeEndISO(d, $("startTime").value, $("endTime").value);
-
-    const payload = {
-      meal: $("mealType").value,
-      starts_at: startISO,
-      ends_at: endISO,
-      notes: ($("notes").value || "").trim() || null
-    };
-
-    $("savingOverlay").classList.add("show");
-    $("saveMeal").disabled = true;
-
-    try{
-      let mealId = editingMealId;
-
-      if (editingMealId){
-        const upd = await sb.from("meals").update(payload).eq("id", editingMealId);
-        if (upd.error){ toast($("toastArea"), upd.error.message, "warn"); return; }
-      } else {
-        const ins = await sb.from("meals").insert(payload).select("id").single();
-        if (ins.error){ toast($("toastArea"), ins.error.message, "warn"); return; }
-        mealId = ins.data.id;
-      }
-
-      const delRes = await sb.from("meal_hosts").delete().eq("meal_id", mealId);
-      if (delRes.error){ toast($("toastArea"), "تعذر تحديث الداعين: " + delRes.error.message, "warn"); return; }
-
-      if (selectedHostIds.size){
-        const rows = [...selectedHostIds].map(member_id => ({ meal_id: mealId, member_id }));
-        const insRes = await sb.from("meal_hosts").insert(rows);
-        if (insRes.error){ toast($("toastArea"), "تعذر إضافة الداعين: " + insRes.error.message, "warn"); return; }
-      }
-
-      editingMealId = mealId;
-      $("deleteMeal").style.display = "inline-flex";
-      toast($("toastArea"), "تم الحفظ ✓", "ok");
-      setStatus("ok","تم الحفظ.");
-      await loadMonthTable();
-
-    } finally {
-      $("savingOverlay").classList.remove("show");
-      $("saveMeal").disabled = false;
-    }
-  }
-
-  async function deleteMeal(){
-    if (!editingMealId) return;
-    const ok = await confirmDelete({
-      title: "تأكيد الحذف",
-      text: "سيتم حذف المناسبة والداعين المرتبطين بها. لا يمكن التراجع."
-    });
-    if (!ok) return;
-
-    $("savingOverlay").classList.add("show");
-    try{
-      const res = await sb.from("meals").delete().eq("id", editingMealId);
-      if (res.error){ toast($("toastArea"), res.error.message, "warn"); return; }
-      toast($("toastArea"), "تم الحذف.", "ok");
-      closeDrawer();
-      resetForm({ open:false });
-      await loadMonthTable();
-    } finally {
-      $("savingOverlay").classList.remove("show");
-    }
-  }
-
-  // Month table
-  async function loadMonthTable(){
-    const month = $("monthPick").value || getMonthParam();
-    $("monthPick").value = month;
-    $("tableMonthLabel").textContent = `جدول ${monthLabel(month)}`;
-    $("waPublish").textContent = `📢 واتساب — ${monthLabel(month)}`;
-
-    const start = `${month}-01T00:00:00+03:00`;
-    const [yy, mm] = month.split("-").map(Number);
-    const endDate = new Date(Date.UTC(yy, mm, 1));
-    const end = `${endDate.getUTCFullYear()}-${pad2(endDate.getUTCMonth()+1)}-${pad2(endDate.getUTCDate())}T00:00:00+03:00`;
-
-    $("monthTableWrap").innerHTML = `
-      <div style="padding:16px">
-        <div class="skeleton" style="height:14px;border-radius:10px;margin-top:10px"></div>
-        <div class="skeleton" style="height:14px;border-radius:10px;margin-top:10px;width:80%"></div>
-        <div class="skeleton" style="height:14px;border-radius:10px;margin-top:10px;width:65%"></div>
-      </div>
-    `;
-
-    const res = await sb.from("meals")
-      .select("id, meal, starts_at, ends_at, notes, meal_hosts(member_id)")
-      .gte("starts_at", start)
-      .lt("starts_at", end)
-      .order("starts_at", { ascending:true });
-
-    if (res.error){ $("monthTableWrap").textContent = res.error.message; return; }
-
-    const meals = res.data || [];
-    if (!meals.length){
-      $("monthTableWrap").innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted)">📭 لا توجد مناسبات لهذا الشهر.</div>`;
-      return;
-    }
-
-    const table = document.createElement("table");
-    table.className = "table";
-    table.innerHTML = `<thead><tr>
-      <th>النوع</th><th>التاريخ</th><th>الوقت</th><th>الداعون</th><th>إجراءات</th>
-    </tr></thead>`;
-
-    const tbody = document.createElement("tbody");
-
-    meals.forEach(r => {
-      const hostIds = (r.meal_hosts || []).map(x => x.member_id);
-      const hostNames = hostIds.map(id => members.find(m => m.id === id)?.full_name).filter(Boolean);
-
-      const tr = document.createElement("tr");
-      tr.className = `row-${r.meal}`;
-
-      tr.innerHTML = `
-        <td data-label="النوع"><b>${r.meal}</b></td>
-        <td data-label="التاريخ">
-          <div style="font-weight:900">${formatGregorian(r.starts_at)}</div>
-          <div class="small">${formatHijriUmmAlQura(r.starts_at)}</div>
-        </td>
-        <td data-label="الوقت" style="white-space:nowrap">${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}</td>
-        <td data-label="الداعون">${hostNames.join(" – ") || "<span class='small'>—</span>"}</td>
-        <td data-label="إجراءات">
-          <div class="rowActions">
-            <button class="iconBtn" data-act="edit">✏️ تعديل</button>
-            <button class="iconBtn danger" data-act="del">🗑 حذف</button>
-          </div>
-        </td>
-      `;
-
-      tr.querySelector('[data-act="edit"]').onclick = () => fillFormFromMeal(r);
-      tr.querySelector('[data-act="del"]').onclick = async () => {
-        const ok = await confirmDelete({
-          title: "تأكيد الحذف",
-          text: `حذف ${formatGregorian(r.starts_at)} ؟`
-        });
-        if (!ok) return;
-
-        $("savingOverlay").classList.add("show");
-        try{
-          const resD = await sb.from("meals").delete().eq("id", r.id);
-          if (resD.error){ toast($("toastArea"), resD.error.message, "warn"); return; }
-          toast($("toastArea"), "تم الحذف.", "ok");
-          await loadMonthTable();
-        } finally {
-          $("savingOverlay").classList.remove("show");
-        }
-      };
-
-      tbody.appendChild(tr);
-    });
-
-    table.appendChild(tbody);
-    $("monthTableWrap").innerHTML = "";
-    $("monthTableWrap").appendChild(table);
-  }
-
-  function buildMonthLink(month){
-    const base = window.location.origin + window.location.pathname.replace("admin.html","schedule.html");
-    return `${base}?month=${month}&access=${encodeURIComponent(ACCESS_TOKEN)}`;
-  }
-
-  function publishWhatsApp(){
-    const month = $("monthPick").value || getMonthParam();
-    const link = buildMonthLink(month);
-    const msg = `📅 جدول ${APP_TITLE}\n${monthLabel(month)}\n\nاضغط الرابط لعرض الجدول وإضافة مناسبتك للتقويم:\n${link}`;
-    window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
-  }
-
-  // Events
-  $("logout").addEventListener("click", async () => {
-    await sb.auth.signOut();
-    location.href = "./login.html";
-  });
-
-  $("addMember").addEventListener("click", addMember);
-  $("newMember").addEventListener("keydown", e => { if (e.key === "Enter") addMember(); });
-
-  $("reloadMonth").addEventListener("click", loadMonthTable);
-  $("monthPick").addEventListener("change", loadMonthTable);
-
-  $("newMealBtn").addEventListener("click", () => resetForm({ open:true }));
-  $("clearForm").addEventListener("click", () => resetForm({ open:true }));
-  $("saveMeal").addEventListener("click", saveMeal);
-  $("deleteMeal").addEventListener("click", deleteMeal);
-  $("waPublish").addEventListener("click", publishWhatsApp);
-
-  // Init
-  (async () => {
-    const user = await requireAdmin();
-    if (!user) return;
-
-    const month = getMonthParam();
-    $("monthPick").value = month;
-
-    await loadMembers();
-    await loadMonthTable();
-    resetForm({ open:false });
-  })();
-</script>
-</body>
-</html>
+}
