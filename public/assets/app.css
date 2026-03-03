@@ -378,3 +378,75 @@ label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin:10p
     margin:8px 0 14px;
   }
 }
+/* =========================================
+   Skeleton Loading (Shimmer) — Pro
+   ========================================= */
+.skeleton{
+  position: relative;
+  overflow: hidden;
+  background: #eef2f7;
+  border-radius: 12px;
+}
+
+.skeleton::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background: linear-gradient(90deg,
+    rgba(238,242,247,0) 0%,
+    rgba(255,255,255,.9) 50%,
+    rgba(238,242,247,0) 100%
+  );
+  transform: translateX(-100%);
+  animation: shimmer 1.25s ease-in-out infinite;
+}
+
+@keyframes shimmer{
+  to { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .skeleton::after{ animation: none; }
+}
+
+.skel-card{
+  border: 1px solid var(--line, #e5e7eb);
+  background: #fff;
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: var(--shadow, 0 22px 60px rgba(15,23,42,.08));
+}
+
+.skel-row{
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  justify-content:space-between;
+}
+
+.skel-left{
+  flex:1 1 auto;
+  min-width:0;
+}
+
+.skel-actions{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  min-width:170px; /* يطابق عندك actionsCol */
+}
+
+@media (max-width:720px){
+  .skel-actions{ min-width: unset; }
+}
+
+.skel-line{ height: 12px; border-radius: 10px; margin-top: 10px; }
+.skel-title{ height: 18px; border-radius: 10px; width: 55%; }
+.skel-chip{ height: 28px; width: 96px; border-radius: 999px; }
+.skel-btn{ height: 38px; border-radius: 12px; }
+
+.skel-hosts{
+  margin-top: 14px;
+  border-top: 1px solid var(--line, #e5e7eb);
+  padding-top: 12px;
+}
