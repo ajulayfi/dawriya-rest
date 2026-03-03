@@ -1,548 +1,201 @@
-<!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>لوحة الإدارة — دورية الاستراحة</title>
+// public/assets/app.js
+import {
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY,
+  ACCESS_TOKEN, // موجود لكن ما عاد نستخدمه للجدول العام
+  TZ,
+  DEFAULT_LOCATION,
+  APP_TITLE
+} from "./config.js";
 
-  <link rel="stylesheet" href="./assets/app.css"/>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+export const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  <style>
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media (max-width:980px){.grid2{grid-template-columns:1fr}}
-    @media (max-width:720px){.row-desktop{grid-template-columns:1fr!important}}
+// -----------------------------
+// Labels
+// -----------------------------
+export const mealLabel = (m) => ({
+  futoor: "فطور",
+  ghada: "غدا",
+  asha: "عشا",
+  suhoor: "سحور",
+}[m] || m);
 
-    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media (max-width:580px){.form-grid{grid-template-columns:1fr}}
+// -----------------------------
+// Helpers
+// -----------------------------
+export function pad2(n){ return String(n).padStart(2, "0"); }
 
-    .member-row{
-      display:flex;align-items:center;justify-content:space-between;
-      padding:10px 14px;border-bottom:1px solid var(--line);gap:12px;
-      transition:background .15s;
-    }
-    .member-row:last-child{border-bottom:none}
-    .member-row:hover{background:#f8fafc}
-    .member-name{font-weight:700;font-size:15px}
-    .member-status{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
-    .status-active{color:#16a34a}
-    .status-inactive{color:var(--muted)}
+export function formatTime12(dateISO){
+  return new Intl.DateTimeFormat("ar-SA", {
+    timeZone: TZ,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true
+  }).format(new Date(dateISO));
+}
 
-    .table tbody tr.row-futoor td:first-child{border-right:3px solid #16a34a}
-    .table tbody tr.row-ghada  td:first-child{border-right:3px solid #f59e0b}
-    .table tbody tr.row-asha   td:first-child{border-right:3px solid #2563eb}
-    .table tbody tr.row-suhoor td:first-child{border-right:3px solid #7c3aed}
+export function formatGregorian(dateISO){
+  return new Intl.DateTimeFormat("ar-SA", {
+    timeZone: TZ,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  }).format(new Date(dateISO));
+}
 
-    .hosts-wrap{display:flex;flex-wrap:wrap;gap:8px;padding:4px 0}
+export function formatHijriUmmAlQura(dateISO){
+  return new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", {
+    timeZone: TZ,
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  }).format(new Date(dateISO));
+}
 
-    .form-editing-banner{
-      background:rgba(99,102,241,.06);
-      border:1.5px solid rgba(99,102,241,.25);
-      border-radius:12px;
-      padding:10px 14px;
-      margin-bottom:12px;
-      font-size:13px;
-      color:#3730a3;
-      font-weight:600;
-      display:none;
-    }
-    .form-editing-banner.show{display:flex;align-items:center;gap:8px}
+export function monthLabel(yyyy_mm){
+  const [y,m] = yyyy_mm.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m-1, 1, 12, 0, 0));
+  return new Intl.DateTimeFormat("ar-SA", { timeZone: TZ, month:"long", year:"numeric" }).format(d);
+}
 
-    .toast-area{
-      position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
-      z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:center;
-      pointer-events:none;
-    }
-    .toast{
-      background:#111827;color:#fff;
-      font-family:inherit;font-size:13px;font-weight:700;
-      padding:11px 22px;border-radius:999px;
-      box-shadow:0 8px 24px rgba(0,0,0,.2);
-      animation:toastIn .25s ease both;
-      white-space:nowrap;
-    }
-    .toast.ok{background:#166534;border:1.5px solid rgba(34,197,94,.3)}
-    .toast.warn{background:#92400e;border:1.5px solid rgba(245,158,11,.3)}
-    @keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+export function getMonthParam(){
+  const params = new URLSearchParams(window.location.search);
+  const month = params.get("month");
+  if (month && /^\d{4}-\d{2}$/.test(month)) return month;
+  const now = new Date();
+  return `${now.getFullYear()}-${pad2(now.getMonth()+1)}`;
+}
 
-    .month-heading{font-weight:900;font-size:15px;margin-bottom:4px}
+export function toISOFromDateAndTime(dateStr, timeStr){
+  // ثابت +03:00 (الرياض)
+  return `${dateStr}T${timeStr}:00+03:00`;
+}
 
-    .saving-overlay{
-      position:fixed;inset:0;background:rgba(255,255,255,.7);backdrop-filter:blur(4px);
-      z-index:500;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;
-      display:none;
-    }
-    .saving-overlay.show{display:flex}
-    .save-spinner{
-      width:44px;height:44px;border:3px solid #e5e7eb;border-top-color:#111827;
-      border-radius:50%;animation:spin .7s linear infinite;
-    }
-    @keyframes spin{to{transform:rotate(360deg)}}
-  </style>
-</head>
+// إضافة يوم للتاريخ (آمن بدون توقيت الجهاز)
+function addDaysToDateStr(dateStr, days){
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + days, 0, 0, 0));
+  return `${dt.getUTCFullYear()}-${pad2(dt.getUTCMonth() + 1)}-${pad2(dt.getUTCDate())}`;
+}
 
-<body>
-<div class="container">
-
-  <div class="header">
-    <div class="title">
-      <h1 id="title">لوحة الإدارة</h1>
-      <div class="sub">إدارة الأعضاء + جدولة شهرية + إشعار واتساب</div>
-    </div>
-    <div class="toolbar">
-      <span id="who" class="badge">—</span>
-      <a class="btn secondary" href="./schedule.html" target="_blank">👁 الجدول</a>
-      <button id="logout" class="btn secondary">خروج</button>
-    </div>
-  </div>
-
-  <div id="status" class="notice">جارٍ التحقق…</div>
-
-  <div class="grid2" style="margin-top:14px" id="mainGrid">
-
-    <div class="card">
-      <div style="font-weight:900;font-size:15px;margin-bottom:4px">الأعضاء</div>
-      <div class="small" style="margin-bottom:14px">أضف وفعّل وأوقف الأعضاء</div>
-
-      <div style="display:flex;gap:10px;align-items:center">
-        <input id="newMember" class="input" placeholder="اسم العضو الجديد" style="flex:1 1 180px"/>
-        <button id="addMember" class="btn" style="white-space:nowrap">+ إضافة</button>
-      </div>
-
-      <div class="hr"></div>
-      <div id="membersList" class="small" style="min-height:60px">—</div>
-    </div>
-
-    <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-        <div>
-          <div style="font-weight:900;font-size:15px">إضافة / تعديل مناسبة</div>
-          <div class="small">الوقت يدعم عبور منتصف الليل</div>
-        </div>
-        <span class="badge">📍 <b style="color:#111827" id="loc">—</b></span>
-      </div>
-
-      <div class="form-editing-banner" id="editingBanner">
-        <span>✏️</span>
-        <span id="editingLabel">وضع التعديل — عدّل ثم اضغط حفظ</span>
-        <button onclick="resetForm()" style="margin-right:auto;background:none;border:none;cursor:pointer;color:#3730a3;font-weight:800;font-size:13px;font-family:inherit">✕ إلغاء</button>
-      </div>
-
-      <div class="form-grid">
-        <div>
-          <label>النوع</label>
-          <select id="mealType" class="input">
-            <option value="futoor">🌅 فطور</option>
-            <option value="ghada">☀️ غدا</option>
-            <option value="asha">🌙 عشا</option>
-            <option value="suhoor">⭐ سحور</option>
-          </select>
-        </div>
-        <div>
-          <label>التاريخ</label>
-          <input id="date" class="input" type="date"/>
-        </div>
-        <div>
-          <label>من</label>
-          <input id="startTime" class="input" type="time" value="19:00"/>
-        </div>
-        <div>
-          <label>إلى</label>
-          <input id="endTime" class="input" type="time" value="00:00"/>
-        </div>
-      </div>
-
-      <label>ملاحظات (اختياري)</label>
-      <textarea id="notes" class="input" rows="2" placeholder="مثال: كل واحد يجيب شيء…"></textarea>
-
-      <div class="hr"></div>
-
-      <div style="font-weight:900;margin-bottom:10px;font-size:14px">الداعون</div>
-      <div id="hostsPicker" class="small">—</div>
-
-      <div class="hr"></div>
-
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between">
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button id="saveMeal" class="btn">💾 حفظ</button>
-          <button id="resetFormBtn" class="btn secondary">تفريغ</button>
-          <button id="deleteMeal" class="btn danger" style="display:none">🗑 حذف</button>
-        </div>
-        <button id="waPublish" class="btn secondary">📢 إشعار واتساب</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="card" style="margin-top:14px">
-    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
-      <div>
-        <div class="month-heading" id="tableMonthLabel">جدول الشهر</div>
-        <div class="small">اضغط على صف للتعديل</div>
-      </div>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <input id="monthPick" class="input" type="month" style="width:160px"/>
-        <button id="reloadMonth" class="btn secondary">تحديث</button>
-      </div>
-    </div>
-    <div class="hr"></div>
-    <div id="monthTableWrap" style="overflow-x:auto">—</div>
-  </div>
-
-</div>
-
-<div class="toast-area" id="toastArea"></div>
-
-<div class="saving-overlay" id="savingOverlay">
-  <div class="save-spinner"></div>
-  <div style="font-weight:700;color:#111827">جاري الحفظ…</div>
-</div>
-
-<script type="module">
-  import { ACCESS_TOKEN, TZ, DEFAULT_LOCATION, APP_TITLE } from "./assets/config.js";
-  import {
-    supabase as sb,
-    pad2,
-    monthLabel,
-    getMonthParam,
-    computeEndISO,
-    formatTime12
-  } from "./assets/app.js";
-
-  const $ = (id) => document.getElementById(id);
-
-  const MEAL_LABEL = { futoor:"فطور", ghada:"غدا", asha:"عشا", suhoor:"سحور" };
-  const MEAL_ICON  = { futoor:"🌅", ghada:"☀️", asha:"🌙", suhoor:"⭐" };
-
-  $("title").textContent = `لوحة الإدارة — ${APP_TITLE}`;
-  $("loc").textContent = DEFAULT_LOCATION;
-
-  function toast(msg, kind=""){
-    const el = document.createElement("div");
-    el.className = "toast " + kind;
-    el.textContent = msg;
-    $("toastArea").appendChild(el);
-    setTimeout(() => el.remove(), 3000);
-  }
-
-  function setStatus(kind, text){
-    $("status").className = kind ? `notice ${kind}` : "notice";
-    $("status").textContent = text;
-  }
-
-  function mealLabelLocal(k){ return MEAL_LABEL[k] || k; }
-  function mealIcon(k) { return MEAL_ICON[k] || "🍽️"; }
-
-  function formatGregorianShort(iso){
-    const d = new Date(iso);
-    const weekday = new Intl.DateTimeFormat("ar-SA", { weekday:"long", timeZone: TZ }).format(d);
-    const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(d);
-    const [y,m,da] = ymd.split("-");
-    return `${weekday} ${da}/${m}/${y}`;
-  }
-
-  function formatHijriShort(iso){
-    try{
-      return "الموافق " + new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", {
-        year:"numeric", month:"long", day:"numeric", timeZone: TZ
-      }).format(new Date(iso));
-    }catch{ return ""; }
-  }
-
-  function buildMonthLink(month){
-    const base = window.location.origin + window.location.pathname.replace("admin.html","schedule.html");
-    return `${base}?month=${month}&access=${encodeURIComponent(ACCESS_TOKEN)}`;
-  }
-
-  // State
-  let members = [];
-  let editingMealId = null;
-  let selectedHostIds = new Set();
-  let currentEditingRow = null;
-
-  async function requireAdmin(){
-    const { data:{ user } } = await sb.auth.getUser();
-    if (!user){ location.href = "./login.html"; return null; }
-    $("who").textContent = user.email || user.id;
-
-    const { data, error } = await sb.rpc("is_admin");
-    if (error || !data){
-      setStatus("warn","غير مصرح. تأكد أن بريدك ضمن قائمة الأدمن.");
-      return null;
-    }
-    setStatus("ok","تم التحقق ✓ يمكنك التعديل.");
-    return user;
-  }
-
-  async function loadMembers(){
-    const { data, error } = await sb.from("members").select("id, full_name, is_active").order("full_name");
-    if (error){ $("membersList").textContent = error.message; return; }
-    members = data || [];
-    renderMembers();
-    renderHostsPicker();
-  }
-
-  function renderMembers(){
-    if (!members.length){
-      $("membersList").textContent = "لا يوجد أعضاء بعد.";
-      return;
-    }
-    const wrap = document.createElement("div");
-    members.forEach(m => {
-      const row = document.createElement("div");
-      row.className = "member-row";
-      row.innerHTML = `
-        <div>
-          <div class="member-name">${m.full_name}</div>
-          <div class="member-status ${m.is_active ? 'status-active' : 'status-inactive'}">${m.is_active ? '● نشط' : '○ موقوف'}</div>
-        </div>
-        <button class="btn secondary" style="font-size:13px;padding:8px 12px">${m.is_active ? "إيقاف" : "تفعيل"}</button>`;
-      row.querySelector("button").onclick = async () => {
-        const { error } = await sb.from("members").update({ is_active:!m.is_active }).eq("id", m.id);
-        if (error){ toast(error.message, "warn"); return; }
-        toast(m.is_active ? `تم إيقاف ${m.full_name}` : `تم تفعيل ${m.full_name}`, "ok");
-        await loadMembers();
-      };
-      wrap.appendChild(row);
-    });
-    $("membersList").innerHTML = "";
-    $("membersList").appendChild(wrap);
-  }
-
-  function renderHostsPicker(){
-    const active = members.filter(m => !!m.is_active);
-    if (!active.length){
-      $("hostsPicker").textContent = "لا يوجد أعضاء مفعّلين.";
-      return;
-    }
-    const wrap = document.createElement("div");
-    wrap.className = "hosts-wrap";
-    active.forEach(m => {
-      const id = `host_${m.id}`;
-      const label = document.createElement("label");
-      label.className = "pill";
-      label.setAttribute("for", id);
-      label.style.cursor = "pointer";
-      label.innerHTML = `<input type="checkbox" id="${id}" ${selectedHostIds.has(m.id) ? "checked" : ""}> <span>${m.full_name}</span>`;
-      label.querySelector("input").onchange = (e) => {
-        if (e.target.checked) selectedHostIds.add(m.id);
-        else selectedHostIds.delete(m.id);
-      };
-      wrap.appendChild(label);
-    });
-    $("hostsPicker").innerHTML = "";
-    $("hostsPicker").appendChild(wrap);
-  }
-
-  async function addMember(){
-    const name = ($("newMember").value || "").trim();
-    if (!name) return;
-    const { error } = await sb.from("members").insert({ full_name:name, is_active:true });
-    if (error){ toast(error.message, "warn"); return; }
-    $("newMember").value = "";
-    toast(`تم إضافة "${name}" ✓`, "ok");
-    await loadMembers();
-  }
-
-  window.resetForm = function(){
-    editingMealId = null;
-    selectedHostIds = new Set();
-    $("mealType").value = "asha";
-    $("notes").value = "";
-    $("deleteMeal").style.display = "none";
-    $("editingBanner").classList.remove("show");
-
-    if (currentEditingRow){ currentEditingRow.classList.remove("editing-row"); currentEditingRow = null; }
-    renderHostsPicker();
-    toast("تم تفريغ النموذج");
+// يحسب endISO ويضمن اليوم التالي عند عبور منتصف الليل
+export function computeEndISO(dateStr, startTime, endTime){
+  const toMin = (t) => {
+    const [h, m] = String(t).split(":").map(Number);
+    return (h * 60) + (m || 0);
   };
 
-  async function saveMeal(){
-    const d = $("date").value;
-    if (!d){ toast("اختر التاريخ", "warn"); return; }
+  const sMin = toMin(startTime);
+  const eMin = toMin(endTime);
 
-    const { startISO, endISO } = computeEndISO(d, $("startTime").value, $("endTime").value);
+  const startISO = toISOFromDateAndTime(dateStr, startTime);
+  const endDateStr = (eMin <= sMin) ? addDaysToDateStr(dateStr, 1) : dateStr;
+  const endISO = toISOFromDateAndTime(endDateStr, endTime);
 
-    if (selectedHostIds.size === 0){
-      if (!confirm("لم يتم اختيار داعين. هل تريد الحفظ بدون داعين؟")) return;
-    }
+  return { startISO, endISO };
+}
 
-    const payload = {
-      meal: $("mealType").value,
-      starts_at: startISO,
-      ends_at: endISO,
-      notes: ($("notes").value || "").trim() || null
-    };
+// يضيف ملاحظة “(اليوم التالي)” لو نهاية المناسبة صار تاريخ مختلف في توقيت الرياض
+export function endLabel(endISO, startISO){
+  const ymd = (iso) => new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit"
+  }).format(new Date(iso));
 
-    $("savingOverlay").classList.add("show");
-    $("saveMeal").disabled = true;
+  return ymd(endISO) !== ymd(startISO) ? " (اليوم التالي)" : "";
+}
 
-    try {
-      let mealId = editingMealId;
+// -----------------------------
+// ICS
+// -----------------------------
+function toICSDateUTC(date){
+  const y = date.getUTCFullYear();
+  const mo = pad2(date.getUTCMonth()+1);
+  const da = pad2(date.getUTCDate());
+  const h = pad2(date.getUTCHours());
+  const mi = pad2(date.getUTCMinutes());
+  return `${y}${mo}${da}T${h}${mi}00Z`;
+}
 
-      if (editingMealId){
-        const upd = await sb.from("meals").update(payload).eq("id", editingMealId);
-        if (upd.error){ toast(upd.error.message, "warn"); return; }
-      } else {
-        const ins = await sb.from("meals").insert(payload).select("id").single();
-        if (ins.error){ toast(ins.error.message, "warn"); return; }
-        mealId = ins.data.id;
-      }
+function escapeICS(s){
+  return (s || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/\n/g, "\\n")
+    .replace(/,/g, "\\,")
+    .replace(/;/g, "\\;");
+}
 
-      const delRes = await sb.from("meal_hosts").delete().eq("meal_id", mealId);
-      if (delRes.error){ toast("تعذر تحديث الداعين: " + delRes.error.message, "warn"); return; }
+export function downloadICS({ meal, startsAtISO, endsAtISO, hostsText, notes }){
+  const start = new Date(startsAtISO);
+  const end = new Date(endsAtISO);
+  const title = `${mealLabel(meal)} ${DEFAULT_LOCATION}`;
 
-      if (selectedHostIds.size){
-        const rows = [...selectedHostIds].map(member_id => ({ meal_id:mealId, member_id }));
-        const insRes = await sb.from("meal_hosts").insert(rows);
-        if (insRes.error){ toast("تعذر إضافة الداعين: " + insRes.error.message, "warn"); return; }
-      }
+  const descriptionLines = [];
+  if (hostsText) descriptionLines.push(`الداعين: ${hostsText}`);
+  if (notes) descriptionLines.push(`ملاحظة: ${notes}`);
+  const description = descriptionLines.join("\n");
 
-      toast("تم الحفظ بنجاح ✓", "ok");
-      setStatus("ok","تم الحفظ.");
-      editingMealId = mealId;
-      $("deleteMeal").style.display = "inline-flex";
-      await loadMonthTable();
+  const uid = `meal-${start.getTime()}-${Math.random().toString(16).slice(2)}@${location.host || "local"}`;
+  const dtstamp = toICSDateUTC(new Date());
 
-    } finally {
-      $("savingOverlay").classList.remove("show");
-      $("saveMeal").disabled = false;
-    }
+  const ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Dawriya Rest//AR",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${uid}`,
+    `DTSTAMP:${dtstamp}`,
+    `DTSTART:${toICSDateUTC(start)}`,
+    `DTEND:${toICSDateUTC(end)}`,
+    `SUMMARY:${escapeICS(title)}`,
+    `DESCRIPTION:${escapeICS(description)}`,
+    `LOCATION:${escapeICS(DEFAULT_LOCATION)}`,
+    "BEGIN:VALARM",
+    "TRIGGER:-PT24H",
+    "ACTION:DISPLAY",
+    `DESCRIPTION:${escapeICS("تذكير بدورية الاستراحة")}`,
+    "END:VALARM",
+    "BEGIN:VALARM",
+    "TRIGGER:-PT3H",
+    "ACTION:DISPLAY",
+    `DESCRIPTION:${escapeICS("الدعوة بعد 3 ساعات")}`,
+    "END:VALARM",
+    "END:VEVENT",
+    "END:VCALENDAR"
+  ].join("\r\n");
+
+  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${mealLabel(meal)}-${start.toISOString().slice(0,10)}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  URL.revokeObjectURL(url);
+}
+
+// -----------------------------
+// DOM helpers
+// -----------------------------
+export function el(tag, attrs={}, children=[]){
+  const node = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)){
+    if (k === "class") node.className = v;
+    else if (k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2), v);
+    else if (v !== null && v !== undefined) node.setAttribute(k, String(v));
   }
-
-  async function deleteMeal(){
-    if (!editingMealId) return;
-    if (!confirm("تأكيد حذف هذه المناسبة؟ لا يمكن التراجع.")) return;
-
-    const res = await sb.from("meals").delete().eq("id", editingMealId);
-    if (res.error){ toast(res.error.message, "warn"); return; }
-
-    toast("تم الحذف.", "ok");
-    resetForm();
-    await loadMonthTable();
+  for (const c of children){
+    if (c === null || c === undefined) continue;
+    node.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
   }
+  return node;
+}
 
-  async function loadMonthTable(){
-    const month = $("monthPick").value || getMonthParam();
-    $("monthPick").value = month;
-
-    const monthTxt = monthLabel(month);
-    $("tableMonthLabel").textContent = `جدول ${monthTxt}`;
-    $("waPublish").textContent = `📢 إشعار واتساب — ${monthTxt}`;
-
-    const start = `${month}-01T00:00:00+03:00`;
-    const [yy, mm] = month.split("-").map(Number);
-    const endDate = new Date(Date.UTC(yy, mm, 1));
-    const end = `${endDate.getUTCFullYear()}-${pad2(endDate.getUTCMonth()+1)}-${pad2(endDate.getUTCDate())}T00:00:00+03:00`;
-
-    const res = await sb.from("meals")
-      .select("id, meal, starts_at, ends_at, notes, meal_hosts(member_id)")
-      .gte("starts_at", start)
-      .lt("starts_at", end)
-      .order("starts_at", { ascending:true });
-
-    if (res.error){ $("monthTableWrap").textContent = res.error.message; return; }
-
-    const meals = res.data || [];
-    if (!meals.length){
-      $("monthTableWrap").innerHTML = `<div style="padding:30px;text-align:center;color:var(--muted)">📭 لا توجد مناسبات لهذا الشهر.</div>`;
-      return;
-    }
-
-    const table = document.createElement("table");
-    table.className = "table";
-    table.innerHTML = `<thead><tr>
-      <th>النوع</th><th>التاريخ</th><th>الوقت</th><th>الداعون</th><th>ملاحظات</th>
-    </tr></thead>`;
-
-    const tbody = document.createElement("tbody");
-    meals.forEach(r => {
-      const hostIds   = (r.meal_hosts || []).map(x => x.member_id);
-      const hostNames = hostIds.map(id => members.find(m => m.id === id)?.full_name).filter(Boolean);
-
-      const tr = document.createElement("tr");
-      tr.className = `row-${r.meal}`;
-      if (editingMealId === r.id) tr.classList.add("editing-row");
-      tr.style.cursor = "pointer";
-
-      tr.innerHTML = `
-        <td><b>${mealIcon(r.meal)} ${mealLabelLocal(r.meal)}</b></td>
-        <td>
-          <div style="font-weight:700">${formatGregorianShort(r.starts_at)}</div>
-          <div class="small">${formatHijriShort(r.starts_at)}</div>
-        </td>
-        <td style="white-space:nowrap">${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}</td>
-        <td>${hostNames.join(" – ") || "<span class='small'>—</span>"}</td>
-        <td class="small">${r.notes || "—"}</td>`;
-
-      tr.onclick = () => {
-        if (currentEditingRow) currentEditingRow.classList.remove("editing-row");
-        tr.classList.add("editing-row");
-        currentEditingRow = tr;
-
-        editingMealId = r.id;
-        $("deleteMeal").style.display = "inline-flex";
-
-        const s = new Date(r.starts_at);
-        const e = new Date(r.ends_at);
-
-        $("mealType").value = r.meal;
-        $("date").value = new Intl.DateTimeFormat("en-CA", { timeZone:TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(s);
-        $("startTime").value = new Intl.DateTimeFormat("en-GB", { timeZone:TZ, hour:"2-digit", minute:"2-digit", hour12:false }).format(s);
-        $("endTime").value   = new Intl.DateTimeFormat("en-GB", { timeZone:TZ, hour:"2-digit", minute:"2-digit", hour12:false }).format(e);
-        $("notes").value = r.notes || "";
-
-        selectedHostIds = new Set(hostIds);
-        renderHostsPicker();
-
-        $("editingBanner").classList.add("show");
-        $("editingLabel").textContent = `تعديل: ${mealLabelLocal(r.meal)} — ${formatGregorianShort(r.starts_at)}`;
-        window.scrollTo({ top:0, behavior:"smooth" });
-      };
-
-      tbody.appendChild(tr);
-    });
-
-    table.appendChild(tbody);
-    $("monthTableWrap").innerHTML = "";
-    $("monthTableWrap").appendChild(table);
-  }
-
-  function publishWhatsApp(){
-    const month = $("monthPick").value || getMonthParam();
-    const link = buildMonthLink(month);
-    const msg = `📅 جدول ${APP_TITLE}\n${monthLabel(month)}\n\nاضغط الرابط لعرض الجدول وإضافة مناسبتك للتقويم:\n${link}`;
-    window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
-  }
-
-  $("logout").addEventListener("click", async () => {
-    await sb.auth.signOut();
-    location.href = "./login.html";
-  });
-
-  $("addMember").addEventListener("click", addMember);
-  $("newMember").addEventListener("keydown", e => { if (e.key === "Enter") addMember(); });
-
-  $("resetFormBtn").addEventListener("click", resetForm);
-  $("saveMeal").addEventListener("click", saveMeal);
-  $("deleteMeal").addEventListener("click", deleteMeal);
-  $("reloadMonth").addEventListener("click", loadMonthTable);
-  $("monthPick").addEventListener("change", loadMonthTable);
-  $("waPublish").addEventListener("click", publishWhatsApp);
-
-  (async () => {
-    const user = await requireAdmin();
-    if (!user) return;
-
-    const today = new Date();
-    $("date").value = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
-
-    const month = getMonthParam();
-    $("monthPick").value = month;
-
-    await loadMembers();
-    await loadMonthTable();
-    resetForm();
-  })();
-</script>
-</body>
-</html>
+export function setTitle(sub){
+  document.title = sub ? `${sub} • ${APP_TITLE}` : APP_TITLE;
+}
