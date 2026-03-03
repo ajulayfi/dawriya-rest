@@ -9,93 +9,34 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    /* تحسينات خاصة بصفحة الجدول */
-    .mealCard{
-      border:1.5px solid var(--line);
-      border-radius:18px;
+    .cardsGrid{display:grid;gap:12px}
+    .actionsCol{display:flex;flex-direction:column;gap:8px;min-width:180px}
+    @media (max-width:720px){.actionsCol{min-width:unset}}
+    .pastCard{opacity:.45;filter:grayscale(.2)}
+    details.pastDetails{
+      border:1px solid var(--line,#e5e7eb);
+      border-radius:16px;
       background:#fff;
-      padding:14px 16px 14px 22px;
-      animation:fadeUp .3s ease both;
+      padding:10px 12px;
+      margin-top:14px;
     }
-    @keyframes fadeUp{
-      from{opacity:0;transform:translateY(8px)}
-      to{opacity:1;transform:translateY(0)}
+    details.pastDetails summary{
+      cursor:pointer;
+      list-style:none;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      user-select:none;
+      font-weight:800;
     }
-
-    .mealTop{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
-    .mealLeft{flex:1;min-width:0}
-
-    .mealBadge{
-      display:inline-flex;align-items:center;gap:8px;
-      font-weight:900;font-size:16px;margin-bottom:6px;
+    details.pastDetails summary::-webkit-details-marker{display:none}
+    .summaryHint{color:var(--muted,#64748b);font-weight:600;font-size:12px}
+    .pill{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:6px 10px;border-radius:999px;border:1px solid var(--line,#e5e7eb);
+      background:#fff;font-size:12px;color:var(--muted,#64748b)
     }
-
-    .mealMeta{color:var(--muted);font-size:13px;line-height:1.8}
-    .mealMeta b{color:#0f172a}
-
-    .actionsCol{display:flex;flex-direction:column;gap:8px;min-width:170px}
-    @media(max-width:620px){
-      .actionsCol{min-width:unset;flex-direction:row;flex-wrap:wrap}
-      .actionsCol .btn{flex:1 1 auto}
-    }
-
-    .hostsBlock{
-      margin-top:12px;
-      padding:10px 14px;
-      border:1.5px dashed var(--line);
-      border-radius:14px;
-      background:rgba(2,6,23,.02);
-    }
-    .hostsTitle{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
-    .hostsNames{font-size:15px;font-weight:800;color:#0f172a;line-height:1.7}
-    .hostsEmpty{font-size:14px;color:var(--muted);font-style:italic}
-
-    .noteRow{
-      margin-top:8px;
-      font-size:13px;color:var(--muted);
-      display:flex;gap:6px;align-items:flex-start;
-    }
-
-    /* Meal color bars */
-    .mealCard{position:relative;overflow:hidden}
-    .mealCard::before{
-      content:"";position:absolute;
-      inset-inline-start:0;top:0;bottom:0;
-      width:5px;border-radius:2px 0 0 2px;
-    }
-    .mc-futoor::before{background:#16a34a}
-    .mc-ghada::before{background:#f59e0b}
-    .mc-asha::before{background:#2563eb}
-    .mc-suhoor::before{background:#7c3aed}
-
-    /* Chips filter */
-    .chips{display:flex;gap:8px;flex-wrap:wrap}
-    .chip{
-      border:1.5px solid var(--line);background:#fff;color:#475569;
-      padding:7px 14px;border-radius:999px;font-size:13px;font-weight:600;
-      cursor:pointer;user-select:none;transition:all .15s;font-family:inherit;
-    }
-    .chip:hover{border-color:#94a3b8;background:#f8fafc}
-    .chip.active{background:#111827;color:#fff;border-color:#111827}
-
-    .month-count{
-      font-size:13px;color:var(--muted);
-      background:#fff;border:1.5px solid var(--line);
-      border-radius:999px;padding:5px 12px;font-weight:600;
-    }
-
-    .empty-state{
-      text-align:center;padding:60px 20px;
-      color:var(--muted);
-    }
-    .empty-state .icon{font-size:2.5rem;display:block;margin-bottom:12px}
-    .spinner{
-      width:36px;height:36px;
-      border:3px solid var(--line);border-top-color:#111827;
-      border-radius:50%;animation:spin .7s linear infinite;
-      margin:0 auto 12px;
-    }
-    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
 
@@ -108,294 +49,404 @@
       <div class="sub">الجدول الشهري — إضافة للتقويم أو مشاركة عبر واتساب</div>
     </div>
     <div class="toolbar">
-      <a class="btn secondary" href="./login.html">🔐 دخول الإدارة</a>
+      <a class="btn secondary" href="./login.html">دخول الإدارة</a>
     </div>
   </div>
 
-  <!-- Sticky bar -->
+  <div id="nextBox" class="nextBanner" style="display:none"></div>
+
   <div class="stickyBar">
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <span class="badge" id="monthBadge">—</span>
       <span class="badge">📍 <b style="color:#111827" id="loc">—</b></span>
-      <span class="badge" id="accessBadge" style="display:none">🔒 رابط خاص</span>
     </div>
+
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <input id="monthPick" class="input" type="month" style="width:160px"/>
       <button id="reload" class="btn secondary">تحديث</button>
     </div>
-  </div>
 
-  <!-- Filters + count -->
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
-    <div class="chips" id="filterChips">
-      <button class="chip active" data-filter="all" onclick="setFilter('all',this)">الكل</button>
-      <button class="chip" data-filter="futoor" onclick="setFilter('futoor',this)">🌅 فطور</button>
-      <button class="chip" data-filter="ghada" onclick="setFilter('ghada',this)">☀️ غدا</button>
-      <button class="chip" data-filter="asha" onclick="setFilter('asha',this)">🌙 عشا</button>
-      <button class="chip" data-filter="suhoor" onclick="setFilter('suhoor',this)">⭐ سحور</button>
+    <div class="chips" id="chips">
+      <button class="chip active" data-filter="all">الكل</button>
+      <button class="chip" data-filter="futoor">فطور</button>
+      <button class="chip" data-filter="ghada">غدا</button>
+      <button class="chip" data-filter="asha">عشا</button>
+      <button class="chip" data-filter="suhoor">سحور</button>
+      <button class="chip" data-filter="upcoming">القادمة</button>
     </div>
-    <span class="month-count" id="mealCount" style="display:none"></span>
   </div>
 
   <div id="msg" class="notice">جارٍ تحميل الجدول…</div>
-  <div id="list" style="margin-top:12px"></div>
+
+  <div class="card" style="margin-top:12px">
+    <div style="font-weight:800">بطاقات الشهر</div>
+    <div class="small">اليوم مميز — المنتهية داخل قسم مطوي بالأسفل.</div>
+    <div class="hr"></div>
+
+    <div id="list">—</div>
+    <div id="pastWrap"></div>
+  </div>
 
 </div>
 
 <script type="module">
-  import { SUPABASE_URL, SUPABASE_ANON_KEY, ACCESS_TOKEN, TZ, DEFAULT_LOCATION, APP_TITLE } from "./assets/config.js";
-
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  window.sb = sb;
+  import { TZ, DEFAULT_LOCATION, APP_TITLE } from "./assets/config.js";
+  import {
+    supabase as sb,
+    pad2,
+    getMonthParam,
+    monthLabel,
+    mealLabel,
+    validateAccessToken,
+    getAccessParam,
+    formatTime12,
+    formatGregorian,
+    formatHijriUmmAlQura,
+    endLabel,
+    downloadICS
+  } from "./assets/app.js";
 
   const $ = (id) => document.getElementById(id);
-  const pad2 = (n) => String(n).padStart(2,"0");
 
   $("pageTitle").textContent = APP_TITLE;
   $("loc").textContent = DEFAULT_LOCATION;
 
-  const MEAL_LABEL = { futoor:"فطور", ghada:"غدا", asha:"عشا", suhoor:"سحور" };
-  const MEAL_ICON  = { futoor:"🌅", ghada:"☀️", asha:"🌙", suhoor:"⭐" };
+  // حماية بسيطة بالرابط
+  const access = getAccessParam();
+  if (!validateAccessToken(access)){
+    $("msg").className = "notice warn";
+    $("msg").textContent = "الرابط غير صالح أو انتهت صلاحيته. تواصل مع مدير النظام للحصول على رابط صحيح.";
+    $("list").innerHTML = "";
+    throw new Error("Invalid access token");
+  }
 
-  let allRows = [];
   let activeFilter = "all";
+  let cachedRows = [];
+  let nextMeal = null;
+  let countdownTimer = null;
 
   function setMessage(kind, text){
     $("msg").className = kind ? ("notice " + kind) : "notice";
     $("msg").textContent = text;
-    $("msg").style.display = text ? "" : "none";
   }
 
-  function getMonthParam(){
-    const u = new URL(location.href);
-    const m = u.searchParams.get("month");
-    if (m && /^\d{4}-\d{2}$/.test(m)) return m;
-    const d = new Date();
-    return d.getFullYear() + "-" + pad2(d.getMonth()+1);
+  function setFilter(f){
+    activeFilter = f;
+    document.querySelectorAll(".chip").forEach(btn => btn.classList.toggle("active", btn.dataset.filter === f));
+    renderAll();
   }
 
-  function monthLabel(month){
-    const [y, m] = month.split("-").map(Number);
-    const d = new Date(Date.UTC(y, m-1, 1, 12, 0, 0));
-    return new Intl.DateTimeFormat("ar-SA", { year:"numeric", month:"long", timeZone: TZ }).format(d);
-  }
-
-  function fmtGregorian(iso){
-    const d = new Date(iso);
-    const weekday = new Intl.DateTimeFormat("ar-SA", { weekday:"long", timeZone: TZ }).format(d);
-    const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(d);
-    const [y, m, da] = ymd.split("-");
-    return `${weekday} ${da}/${m}/${y}`;
-  }
-
-  function fmtHijri(iso){
-    try{
-      return "الموافق " + new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", {
-        year:"numeric", month:"long", day:"numeric", timeZone: TZ
-      }).format(new Date(iso));
-    }catch{ return ""; }
-  }
-
-  function fmtTime12(iso){
-    return new Intl.DateTimeFormat("ar-SA", {
-      hour:"numeric", minute:"2-digit", hour12:true, timeZone: TZ
-    }).format(new Date(iso));
-  }
-
-  function makeICS({ title, description, location, startsAtISO, endsAtISO }){
-    const dt = (date) => {
-      const y=date.getUTCFullYear(), mo=pad2(date.getUTCMonth()+1), da=pad2(date.getUTCDate());
-      const hh=pad2(date.getUTCHours()), mm=pad2(date.getUTCMinutes()), ss=pad2(date.getUTCSeconds());
-      return `${y}${mo}${da}T${hh}${mm}${ss}Z`;
-    };
-    const esc = (s) => String(s||"").replace(/\\/g,"\\\\").replace(/\n/g,"\\n").replace(/,/g,"\\,").replace(/;/g,"\\;");
-    const uid = (crypto.randomUUID ? crypto.randomUUID() : Date.now()) + "@dawriya-rest";
-    return [
-      "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Dawriya Rest//AR//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH",
-      "BEGIN:VEVENT",
-      "UID:" + uid,
-      "DTSTAMP:" + dt(new Date()),
-      "DTSTART:" + dt(new Date(startsAtISO)),
-      "DTEND:" + dt(new Date(endsAtISO)),
-      "SUMMARY:" + esc(title),
-      "DESCRIPTION:" + esc(description),
-      "LOCATION:" + esc(location),
-      "BEGIN:VALARM","TRIGGER:-PT24H","ACTION:DISPLAY","DESCRIPTION:تذكير بدورية الاستراحة","END:VALARM",
-      "BEGIN:VALARM","TRIGGER:-PT3H","ACTION:DISPLAY","DESCRIPTION:الدعوة بعد 3 ساعات","END:VALARM",
-      "END:VEVENT","END:VCALENDAR"
-    ].join("\r\n");
-  }
-
-  function downloadICS(text, filename){
-    const blob = new Blob([text], { type:"text/calendar;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1200);
-  }
-
-  function buildCard(r, delay){
-    const hosts = (r._hostNames?.length ? r._hostNames.join(" – ") : null);
-    const g = fmtGregorian(r.starts_at);
-    const h = fmtHijri(r.starts_at);
-    const t = `${fmtTime12(r.starts_at)} – ${fmtTime12(r.ends_at)}`;
-
-    const card = document.createElement("div");
-    card.className = `mealCard mc-${r.meal}`;
-    card.style.animationDelay = delay + "ms";
-    card.setAttribute("data-meal", r.meal);
-
-    card.innerHTML = `
-      <div class="mealTop">
-        <div class="mealLeft">
-          <div class="mealBadge">${MEAL_ICON[r.meal] || "🍽️"} ${MEAL_LABEL[r.meal] || r.meal}</div>
-          <div class="mealMeta">
-            <span>📅 <b>${g}</b></span>
-            ${h ? `<span>🕌 ${h}</span>` : ""}
-            <span>⏰ ${t}</span>
-          </div>
-        </div>
-        <div class="actionsCol">
-          <button class="btn secondary" data-ics="${r.id}">📅 أضف للتقويم</button>
-          <button class="btn" data-wa="${r.id}">📤 واتساب</button>
-        </div>
-      </div>
-      <div class="hostsBlock">
-        <div class="hostsTitle">الداعون</div>
-        ${hosts
-          ? `<div class="hostsNames">${hosts}</div>`
-          : `<div class="hostsEmpty">لم يُعيَّن داعون بعد</div>`}
-        ${r.notes ? `<div class="noteRow">📝 <span>${r.notes}</span></div>` : ""}
-      </div>`;
-
-    // ICS
-    card.querySelector("[data-ics]").addEventListener("click", () => {
-      const title = `${APP_TITLE} — ${MEAL_LABEL[r.meal]}`;
-      const desc = [
-        `${MEAL_ICON[r.meal]} ${MEAL_LABEL[r.meal]}`,
-        `📅 ${g}`, h ? `🕌 ${h}` : null, `⏰ ${t}`,
-        `📍 ${DEFAULT_LOCATION}`,
-        `👥 الداعون: ${hosts || "—"}`,
-        r.notes ? `📝 ${r.notes}` : null
-      ].filter(Boolean).join("\n");
-      const ics = makeICS({ title, description:desc, location:DEFAULT_LOCATION, startsAtISO:r.starts_at, endsAtISO:r.ends_at });
-      const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(new Date(r.starts_at));
-      downloadICS(ics, `${MEAL_LABEL[r.meal]}-${ymd}.ics`);
-    });
-
-    // WhatsApp
-    card.querySelector("[data-wa]").addEventListener("click", () => {
-      const msg = [
-        `${MEAL_ICON[r.meal]} *${MEAL_LABEL[r.meal]}*`,
-        `📅 ${g}`, h ? `🕌 ${h}` : null, `⏰ ${t}`,
-        `📍 ${DEFAULT_LOCATION}`,
-        `👥 الداعون: ${hosts || "—"}`,
-        r.notes ? `📝 ${r.notes}` : null,
-        "", location.href
-      ].filter(s => s !== null).join("\n");
-      window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
-    });
-
-    return card;
-  }
-
-  // ── Filter ──
-  window.setFilter = function(filter, btn){
-    activeFilter = filter;
-    document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
-    btn.classList.add("active");
-    renderList();
-  };
-
-  function renderList(){
-    const rows = activeFilter === "all" ? allRows : allRows.filter(r => r.meal === activeFilter);
-    const list = $("list");
-    list.innerHTML = "";
-
-    const countEl = $("mealCount");
-    if (rows.length){
-      countEl.textContent = `${rows.length} مناسبة`;
-      countEl.style.display = "inline-flex";
-    } else {
-      countEl.style.display = "none";
-    }
-
-    if (!rows.length){
-      list.innerHTML = `<div class="empty-state"><span class="icon">📭</span>لا توجد مناسبات لهذا الاختيار.</div>`;
-      return;
-    }
-
-    const wrap = document.createElement("div");
-    wrap.className = "cardsGrid";
-    rows.forEach((r, i) => wrap.appendChild(buildCard(r, i * 50)));
-    list.appendChild(wrap);
-  }
-
-  function requireAccessIfProvided(){
-    const u = new URL(location.href);
-    const access = u.searchParams.get("access");
-    if (!access) return true;
-    $("accessBadge").style.display = "inline-flex";
-    return access === ACCESS_TOKEN;
-  }
-
-  async function loadMonth(month){
-    $("monthBadge").textContent = monthLabel(month);
-    setMessage("", "جارٍ تحميل الجدول…");
-    $("list").innerHTML = `<div class="empty-state"><div class="spinner"></div>جاري التحميل…</div>`;
-    $("mealCount").style.display = "none";
-
-    if (!requireAccessIfProvided()){
-      setMessage("warn", "رابط غير صالح (access).");
-      $("list").innerHTML = "";
-      return;
-    }
-
-    const start = `${month}-01T00:00:00+03:00`;
-    const [yy, mm] = month.split("-").map(Number);
-    const endDate = new Date(Date.UTC(yy, mm, 1, 0, 0, 0));
-    const end = `${endDate.getUTCFullYear()}-${pad2(endDate.getUTCMonth()+1)}-${pad2(endDate.getUTCDate())}T00:00:00+03:00`;
-
-    const res = await sb
-      .from("meals")
-      .select(`id, meal, starts_at, ends_at, notes,
-               meal_hosts ( member_id, members ( full_name ) )`)
-      .gte("starts_at", start)
-      .lt("starts_at", end)
-      .order("starts_at", { ascending:true });
-
-    if (res.error){
-      setMessage("warn", "تعذر تحميل البيانات: " + res.error.message);
-      $("list").innerHTML = "";
-      return;
-    }
-
-    allRows = (res.data || []).map(r => ({
-      ...r,
-      _hostNames: (r.meal_hosts || []).map(h => h.members?.full_name).filter(Boolean)
-    }));
-
-    if (!allRows.length){
-      setMessage("", "لا توجد مناسبات لهذا الشهر.");
-      $("list").innerHTML = `<div class="empty-state"><span class="icon">📭</span>لا توجد مناسبات لهذا الشهر.</div>`;
-      return;
-    }
-
-    setMessage("ok", `تم تحميل ${allRows.length} مناسبة.`);
-    renderList();
-  }
-
-  // Init
-  const initialMonth = getMonthParam();
-  $("monthPick").value = initialMonth;
-  $("monthBadge").textContent = monthLabel(initialMonth);
+  $("chips").addEventListener("click", (e) => {
+    const btn = e.target.closest(".chip");
+    if (!btn) return;
+    setFilter(btn.dataset.filter);
+  });
 
   $("reload").addEventListener("click", () => loadMonth($("monthPick").value));
   $("monthPick").addEventListener("change", () => loadMonth($("monthPick").value));
 
+  function isTodayTZ(iso){
+    const a = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(new Date(iso));
+    const b = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(new Date());
+    return a === b;
+  }
+
+  function formatCountdown(ms){
+    if (ms <= 0) return "بدأت الآن";
+    const s = Math.floor(ms/1000);
+    const days = Math.floor(s/86400);
+    const hrs  = Math.floor((s%86400)/3600);
+    const mins = Math.floor((s%3600)/60);
+    if (days > 0) return "باقي " + days + " يوم و " + hrs + " ساعة";
+    if (hrs > 0)  return "باقي " + hrs + " ساعة و " + mins + " دقيقة";
+    return "باقي " + mins + " دقيقة";
+  }
+
+  function pickNextUpcoming(rows){
+    const now = new Date();
+    const upcoming = rows
+      .filter(r => new Date(r.starts_at) >= now)
+      .sort((a,b)=> new Date(a.starts_at) - new Date(b.starts_at));
+    return upcoming.length ? upcoming[0] : null;
+  }
+
+  function showNextBanner(r){
+    const box = $("nextBox");
+    if (!r){
+      box.style.display = "none";
+      return;
+    }
+
+    const g = formatGregorian(r.starts_at);
+    const h = formatHijriUmmAlQura(r.starts_at);
+    const t = formatTime12(r.starts_at) + " – " + formatTime12(r.ends_at) + endLabel(r.ends_at, r.starts_at);
+
+    box.style.display = "block";
+    box.innerHTML = `
+      <div>⏭️ <b>أقرب مناسبة:</b> ${mealLabel(r.meal)}</div>
+      <div class="small">📅 ${g}</div>
+      <div class="small">🕌 ${h}</div>
+      <div class="small">⏰ ${t}</div>
+      <div style="margin-top:6px"><b id="countDown">⏳ ...</b></div>
+    `;
+  }
+
+  function runCountdown(){
+    if (countdownTimer) clearInterval(countdownTimer);
+    countdownTimer = null;
+    if (!nextMeal) return;
+
+    const tick = () => {
+      const el = document.getElementById("countDown");
+      if (!el) return;
+      const ms = new Date(nextMeal.starts_at) - new Date();
+      el.textContent = "⏳ " + formatCountdown(ms);
+    };
+
+    tick();
+    countdownTimer = setInterval(tick, 30000);
+  }
+
+  function openWhatsAppShare(text){
+    window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+  }
+
+  function buildCard(r, { variant }){
+    const now = new Date();
+    const isPast = new Date(r.starts_at) < now;
+    const isToday = isTodayTZ(r.starts_at);
+    const isNext = nextMeal && r.id === nextMeal.id;
+
+    const hosts = (r._hostNames && r._hostNames.length) ? r._hostNames.join(" – ") : "—";
+    const g = formatGregorian(r.starts_at);
+    const h = formatHijriUmmAlQura(r.starts_at);
+    const t = formatTime12(r.starts_at) + " – " + formatTime12(r.ends_at) + endLabel(r.ends_at, r.starts_at);
+
+    const card = document.createElement("div");
+    card.className = "card mealCardPro mealCard";
+    card.dataset.meal = r.meal;
+
+    if (variant === "past" || isPast){
+      card.classList.add("pastCard");
+    }
+
+    if (variant !== "past"){
+      if (isToday){
+        card.style.border = "1px solid rgba(245,158,11,.55)";
+        card.style.background = "rgba(245,158,11,.06)";
+      } else if (isNext){
+        card.style.border = "1px solid rgba(34,197,94,.55)";
+        card.style.background = "rgba(34,197,94,.06)";
+      }
+    }
+
+    const tagText = (variant !== "past") ? (isToday ? "📍 اليوم" : (isNext ? "⏭️ الأقرب" : "")) : "";
+
+    const top = document.createElement("div");
+    top.className = "mealTopPro";
+
+    const left = document.createElement("div");
+    left.innerHTML = `
+      <div class="mealBadge">🍽️ ${mealLabel(r.meal)}</div>
+      <div class="mealMeta" style="margin-top:8px">
+        <div><b style="color:#0f172a">📅 ${g}</b></div>
+        <div>🕌 ${h}</div>
+        <div>⏰ ${t}</div>
+      </div>
+    `;
+    if (tagText){
+      const pill = document.createElement("span");
+      pill.className = "pill";
+      pill.style.marginTop = "10px";
+      pill.textContent = tagText;
+      left.appendChild(pill);
+    }
+
+    const actions = document.createElement("div");
+    actions.className = "actionsCol";
+
+    const btnIcs = document.createElement("button");
+    btnIcs.className = "btn secondary primaryAction";
+    btnIcs.textContent = "📅 أضف للتقويم";
+    btnIcs.onclick = () => {
+      downloadICS({
+        meal: r.meal,
+        startsAtISO: r.starts_at,
+        endsAtISO: r.ends_at,
+        hostsText: hosts,
+        notes: r.notes
+      });
+    };
+
+    const btnWa = document.createElement("button");
+    btnWa.className = "btn";
+    btnWa.style.background = "#25D366";
+    btnWa.textContent = "📤 مشاركة واتساب";
+    btnWa.onclick = () => {
+      const msg = [
+        "🍽️ " + mealLabel(r.meal),
+        "📅 " + g,
+        "🕌 " + h,
+        "⏰ " + t,
+        "📍 " + DEFAULT_LOCATION,
+        "👥 الداعين: " + hosts
+      ];
+      if (r.notes) msg.push("📝 " + r.notes);
+      msg.push("");
+      msg.push(location.href);
+      openWhatsAppShare(msg.join("\n"));
+    };
+
+    actions.appendChild(btnIcs);
+    actions.appendChild(btnWa);
+
+    top.appendChild(left);
+    top.appendChild(actions);
+
+    const hostsBlock = document.createElement("div");
+    hostsBlock.className = "hostsBlock";
+    hostsBlock.innerHTML = `
+      <div class="hostsTitle">الداعين</div>
+      <div class="hostsNames">${hosts}</div>
+    `;
+    if (r.notes){
+      const note = document.createElement("div");
+      note.className = "small";
+      note.style.marginTop = "8px";
+      note.textContent = "ملاحظة: " + r.notes;
+      hostsBlock.appendChild(note);
+    }
+
+    card.appendChild(top);
+    card.appendChild(hostsBlock);
+    return card;
+  }
+
+  function renderAll(){
+    const now = new Date();
+    let base = cachedRows.slice();
+
+    if (activeFilter === "upcoming") base = base.filter(r => new Date(r.starts_at) >= now);
+    else if (activeFilter !== "all") base = base.filter(r => r.meal === activeFilter);
+
+    const currentRows = base.filter(r => new Date(r.starts_at) >= now);
+    const pastRowsAll = cachedRows.filter(r => new Date(r.starts_at) < now);
+
+    currentRows.sort((a,b)=>{
+      const aToday = isTodayTZ(a.starts_at) ? 0 : 1;
+      const bToday = isTodayTZ(b.starts_at) ? 0 : 1;
+      if (aToday !== bToday) return aToday - bToday;
+      return new Date(a.starts_at) - new Date(b.starts_at);
+    });
+
+    pastRowsAll.sort((a,b)=> new Date(b.starts_at) - new Date(a.starts_at));
+
+    const wrap = document.createElement("div");
+    wrap.className = "cardsGrid";
+
+    if (!currentRows.length){
+      wrap.innerHTML = '<div class="notice">لا توجد مناسبات قادمة ضمن هذا الفلتر.</div>';
+    } else {
+      currentRows.forEach(r => wrap.appendChild(buildCard(r, { variant: "normal" })));
+    }
+
+    $("list").innerHTML = "";
+    $("list").appendChild(wrap);
+
+    const pastWrap = $("pastWrap");
+    pastWrap.innerHTML = "";
+
+    if (pastRowsAll.length){
+      const details = document.createElement("details");
+      details.className = "pastDetails";
+      details.open = false;
+
+      const summary = document.createElement("summary");
+      summary.innerHTML = `
+        <div>المنتهية (${pastRowsAll.length})</div>
+        <div class="summaryHint">اضغط للعرض</div>
+      `;
+
+      const inner = document.createElement("div");
+      inner.style.marginTop = "12px";
+
+      const grid = document.createElement("div");
+      grid.className = "cardsGrid";
+      pastRowsAll.forEach(r => grid.appendChild(buildCard(r, { variant: "past" })));
+
+      inner.appendChild(grid);
+      details.appendChild(summary);
+      details.appendChild(inner);
+      pastWrap.appendChild(details);
+    }
+  }
+
+  async function loadMonth(m){
+    $("monthPick").value = m;
+    $("monthBadge").textContent = monthLabel(m);
+
+    setMessage("", "جارٍ تحميل الجدول…");
+    $("list").textContent = "—";
+    $("pastWrap").innerHTML = "";
+
+    const start = m + "-01T00:00:00+03:00";
+    const [yy, mm] = m.split("-").map(Number);
+    const endDate = new Date(Date.UTC(yy, mm, 1));
+    const end = endDate.getUTCFullYear() + "-" + pad2(endDate.getUTCMonth()+1) + "-" + pad2(endDate.getUTCDate()) + "T00:00:00+03:00";
+
+    const resMeals = await sb
+      .from("meals")
+      .select(`
+        id, meal, starts_at, ends_at, notes,
+        meal_hosts (
+          member_id,
+          members ( full_name )
+        )
+      `)
+      .gte("starts_at", start)
+      .lt("starts_at", end)
+      .order("starts_at", { ascending:true });
+
+    if (resMeals.error){
+      setMessage("warn", "تعذر تحميل البيانات: " + resMeals.error.message);
+      $("nextBox").style.display = "none";
+      cachedRows = [];
+      nextMeal = null;
+      if (countdownTimer) clearInterval(countdownTimer);
+      return;
+    }
+
+    const rows = resMeals.data || [];
+    if (!rows.length){
+      setMessage("", "لا توجد بيانات لهذا الشهر حتى الآن.");
+      $("list").innerHTML = '<div class="notice">لا توجد مناسبات.</div>';
+      $("nextBox").style.display = "none";
+      cachedRows = [];
+      nextMeal = null;
+      if (countdownTimer) clearInterval(countdownTimer);
+      return;
+    }
+
+    rows.forEach(r => {
+      const hosts = (r.meal_hosts || [])
+        .map(h => h.members?.full_name)
+        .filter(Boolean);
+      r._hostNames = hosts;
+    });
+
+    cachedRows = rows;
+    setMessage("ok", "تم تحميل الجدول.");
+
+    nextMeal = pickNextUpcoming(rows);
+    showNextBanner(nextMeal);
+    runCountdown();
+
+    renderAll();
+  }
+
+  const initialMonth = getMonthParam();
+  $("monthPick").value = initialMonth;
+  $("monthBadge").textContent = monthLabel(initialMonth);
   loadMonth(initialMonth);
 </script>
 
