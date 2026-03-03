@@ -277,16 +277,29 @@
     return d.getFullYear() + "-" + pad2(d.getMonth()+1);
   }
 
+  // ✅ آمن: إضافة يوم للتاريخ بدون خلط توقيت
+  function addDaysToDateStr(dateStr, days){
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d) + (days * 86400000));
+    return `${dt.getUTCFullYear()}-${pad2(dt.getUTCMonth()+1)}-${pad2(dt.getUTCDate())}`;
+  }
+
+  // ✅ إصلاح عبور منتصف الليل بدون خلط UTC مع +03:00
   function computeEndISO(dateStr, startHH, endHH){
+    const toMin = (t) => {
+      const [h, m] = String(t).split(":").map(Number);
+      return (h * 60) + (m || 0);
+    };
+
     const startISO = `${dateStr}T${startHH}:00+03:00`;
-    let endISO = `${dateStr}T${endHH}:00+03:00`;
-    const s = new Date(startISO), e = new Date(endISO);
-    if (e <= s){
-      const e2 = new Date(e.getTime() + 86400000);
-      const y=e2.getUTCFullYear(), mo=pad2(e2.getUTCMonth()+1), da=pad2(e2.getUTCDate());
-      const hh=pad2(e2.getUTCHours()), mm=pad2(e2.getUTCMinutes());
-      endISO = `${y}-${mo}-${da}T${hh}:${mm}:00+03:00`;
-    }
+    const sMin = toMin(startHH);
+    const eMin = toMin(endHH);
+
+    const endDateStr = (eMin <= sMin)
+      ? addDaysToDateStr(dateStr, 1)
+      : dateStr;
+
+    const endISO = `${endDateStr}T${endHH}:00+03:00`;
     return { startISO, endISO };
   }
 
@@ -306,6 +319,7 @@
     const { data:{ user } } = await sb.auth.getUser();
     if (!user){ location.href = "./login.html"; return null; }
     $("who").textContent = user.email || user.id;
+
     const { data, error } = await sb.rpc("is_admin");
     if (error || !data){
       setStatus("warn","غير مصرح. تأكد أن بريدك ضمن قائمة الأدمن.");
@@ -394,7 +408,7 @@
     $("notes").value = "";
     $("deleteMeal").style.display = "none";
     $("editingBanner").classList.remove("show");
-    // remove editing highlight
+
     if (currentEditingRow){ currentEditingRow.classList.remove("editing-row"); currentEditingRow = null; }
     renderHostsPicker();
     toast("تم تفريغ النموذج");
@@ -432,7 +446,6 @@
         mealId = ins.data.id;
       }
 
-      // Update hosts
       const delRes = await sb.from("meal_hosts").delete().eq("meal_id", mealId);
       if (delRes.error){ toast("تعذر تحديث الداعين: " + delRes.error.message, "warn"); return; }
 
@@ -502,6 +515,7 @@
     meals.forEach(r => {
       const hostIds   = (r.meal_hosts || []).map(x => x.member_id);
       const hostNames = hostIds.map(id => members.find(m => m.id === id)?.full_name).filter(Boolean);
+
       const tr = document.createElement("tr");
       tr.className = `row-${r.meal}`;
       if (editingMealId === r.id) tr.classList.add("editing-row");
@@ -517,7 +531,6 @@
         <td class="small">${r.notes || "—"}</td>`;
 
       tr.onclick = () => {
-        // Remove previous editing highlight
         if (currentEditingRow) currentEditingRow.classList.remove("editing-row");
         tr.classList.add("editing-row");
         currentEditingRow = tr;
@@ -527,11 +540,13 @@
 
         const s = new Date(r.starts_at);
         const e = new Date(r.ends_at);
+
         $("mealType").value = r.meal;
         $("date").value = new Intl.DateTimeFormat("en-CA", { timeZone:TZ, year:"numeric", month:"2-digit", day:"2-digit" }).format(s);
         $("startTime").value = new Intl.DateTimeFormat("en-GB", { timeZone:TZ, hour:"2-digit", minute:"2-digit", hour12:false }).format(s);
         $("endTime").value   = new Intl.DateTimeFormat("en-GB", { timeZone:TZ, hour:"2-digit", minute:"2-digit", hour12:false }).format(e);
         $("notes").value = r.notes || "";
+
         selectedHostIds = new Set(hostIds);
         renderHostsPicker();
 
@@ -540,8 +555,10 @@
 
         window.scrollTo({ top:0, behavior:"smooth" });
       };
+
       tbody.appendChild(tr);
     });
+
     table.appendChild(tbody);
     $("monthTableWrap").innerHTML = "";
     $("monthTableWrap").appendChild(table);
