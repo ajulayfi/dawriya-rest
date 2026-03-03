@@ -97,8 +97,6 @@
     getMonthParam,
     monthLabel,
     mealLabel,
-    validateAccessToken,
-    getAccessParam,
     formatTime12,
     formatGregorian,
     formatHijriUmmAlQura,
@@ -110,15 +108,6 @@
 
   $("pageTitle").textContent = APP_TITLE;
   $("loc").textContent = DEFAULT_LOCATION;
-
-  // حماية بسيطة بالرابط
-  const access = getAccessParam();
-  if (!validateAccessToken(access)){
-    $("msg").className = "notice warn";
-    $("msg").textContent = "الرابط غير صالح أو انتهت صلاحيته. تواصل مع مدير النظام للحصول على رابط صحيح.";
-    $("list").innerHTML = "";
-    throw new Error("Invalid access token");
-  }
 
   let activeFilter = "all";
   let cachedRows = [];
