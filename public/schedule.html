@@ -7,38 +7,14 @@
 
   <link rel="stylesheet" href="./assets/app.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <style>
-    /* فقط تخصيصات بسيطة لهذه الصفحة (بدون Skeleton) */
-    details.pastDetails{
-      border:1px solid var(--line,#e5e7eb);
-      border-radius:16px;
-      background:#fff;
-      padding:10px 12px;
-      margin-top:14px;
-    }
-    details.pastDetails summary{
-      cursor:pointer;
-      list-style:none;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      user-select:none;
-      font-weight:900;
-    }
-    details.pastDetails summary::-webkit-details-marker{display:none}
-    .summaryHint{color:var(--muted,#64748b);font-weight:700;font-size:12px}
-  </style>
 </head>
 
 <body>
 <div class="container">
 
-  <!-- Header -->
   <div class="header">
     <div class="title">
-      <h1 id="pageTitle">—</h1>
+      <h1 id="pageTitle">دورية الاستراحة</h1>
       <div class="sub">الجدول الشهري — إضافة للتقويم أو مشاركة عبر واتساب</div>
     </div>
     <div class="toolbar">
@@ -46,10 +22,8 @@
     </div>
   </div>
 
-  <!-- Next banner -->
   <div id="nextBox" class="nextBanner" style="display:none"></div>
 
-  <!-- Sticky tools -->
   <div class="stickyBar">
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <span class="badge" id="monthBadge">—</span>
@@ -71,12 +45,10 @@
     </div>
   </div>
 
-  <!-- Message -->
   <div id="msg" class="notice">—</div>
 
-  <!-- Cards -->
   <div class="card" style="margin-top:12px">
-    <div style="font-weight:900">بطاقات الشهر</div>
+    <div style="font-weight:800">بطاقات الشهر</div>
     <div class="small">اليوم مميز — المنتهية داخل قسم مطوي بالأسفل.</div>
     <div class="hr"></div>
 
@@ -87,23 +59,20 @@
 </div>
 
 <script type="module">
-  import { TZ, DEFAULT_LOCATION, APP_TITLE } from "./assets/config.js";
+  import { DEFAULT_LOCATION, APP_TITLE, TZ } from "./assets/config.js";
   import {
-    supabase as sb,
+    sb,
     pad2,
     getMonthParam,
     monthLabel,
     mealLabel,
-    validateAccessToken,
-    getAccessParam,
     formatTime12,
     formatGregorian,
     formatHijriUmmAlQura,
+    isTodayTZ,
     endLabel,
     downloadICS,
-    renderSkeleton,
-    isTodayTZ,
-    openWhatsAppShare
+    skeletonMealsHTML
   } from "./assets/app.js";
 
   const $ = (id) => document.getElementById(id);
@@ -111,9 +80,6 @@
   $("pageTitle").textContent = APP_TITLE;
   $("loc").textContent = DEFAULT_LOCATION;
 
-  // ✅ Public schedule (no token)
-setMessage("", ""); // نخليه فاضي لأننا بنعرض Skeleton أثناء التحميل
-  
   let activeFilter = "all";
   let cachedRows = [];
   let nextMeal = null;
@@ -126,8 +92,7 @@ setMessage("", ""); // نخليه فاضي لأننا بنعرض Skeleton أثن
 
   function setFilter(f){
     activeFilter = f;
-    document.querySelectorAll(".chip")
-      .forEach(btn => btn.classList.toggle("active", btn.dataset.filter === f));
+    document.querySelectorAll(".chip").forEach(btn => btn.classList.toggle("active", btn.dataset.filter === f));
     renderAll();
   }
 
@@ -168,7 +133,7 @@ setMessage("", ""); // نخليه فاضي لأننا بنعرض Skeleton أثن
 
     const g = formatGregorian(r.starts_at);
     const h = formatHijriUmmAlQura(r.starts_at);
-    const t = `${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}${endLabel(r.ends_at, r.starts_at)}`;
+    const t = formatTime12(r.starts_at) + " – " + formatTime12(r.ends_at) + endLabel(r.ends_at, r.starts_at);
 
     box.style.display = "block";
     box.innerHTML = `
@@ -196,6 +161,10 @@ setMessage("", ""); // نخليه فاضي لأننا بنعرض Skeleton أثن
     countdownTimer = setInterval(tick, 30000);
   }
 
+  function openWhatsAppShare(text){
+    window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+  }
+
   function buildCard(r, { variant }){
     const now = new Date();
     const isPast = new Date(r.starts_at) < now;
@@ -205,18 +174,16 @@ setMessage("", ""); // نخليه فاضي لأننا بنعرض Skeleton أثن
     const hosts = (r._hostNames && r._hostNames.length) ? r._hostNames.join(" – ") : "—";
     const g = formatGregorian(r.starts_at);
     const h = formatHijriUmmAlQura(r.starts_at);
-    const t = `${formatTime12(r.starts_at)} – ${formatTime12(r.ends_at)}${endLabel(r.ends_at, r.starts_at)}`;
+    const t = formatTime12(r.starts_at) + " – " + formatTime12(r.ends_at) + endLabel(r.ends_at, r.starts_at);
 
     const card = document.createElement("div");
-    card.className = "card mealCard mealCardPro";
+    card.className = "card mealCard";
     card.dataset.meal = r.meal;
 
     if (variant === "past" || isPast){
-      card.style.opacity = ".55";
-      card.style.filter = "grayscale(.25)";
+      card.classList.add("pastCard");
     }
 
-    // إبراز اليوم / الأقرب
     if (variant !== "past"){
       if (isToday){
         card.style.border = "1px solid rgba(245,158,11,.55)";
@@ -227,17 +194,15 @@ setMessage("", ""); // نخليه فاضي لأننا بنعرض Skeleton أثن
       }
     }
 
-    const tagText = (variant !== "past")
-      ? (isToday ? "📍 اليوم" : (isNext ? "⏭️ الأقرب" : ""))
-      : "";
+    const tagText = (variant !== "past") ? (isToday ? "📍 اليوم" : (isNext ? "⏭️ الأقرب" : "")) : "";
 
     const top = document.createElement("div");
-    top.className = "mealTopPro";
+    top.className = "mealTop";
 
     const left = document.createElement("div");
     left.innerHTML = `
-      <div class="mealBadge">🍽️ ${mealLabel(r.meal)}</div>
-      <div class="mealMeta" style="margin-top:8px">
+      <div class="mealName">🍽️ ${mealLabel(r.meal)}</div>
+      <div class="mealMeta">
         <div><b style="color:#0f172a">📅 ${g}</b></div>
         <div>🕌 ${h}</div>
         <div>⏰ ${t}</div>
@@ -256,15 +221,17 @@ setMessage("", ""); // نخليه فاضي لأننا بنعرض Skeleton أثن
     actions.className = "actionsCol";
 
     const btnIcs = document.createElement("button");
-    btnIcs.className = "btn secondary primaryAction";
+    btnIcs.className = "btn secondary";
     btnIcs.textContent = "📅 أضف للتقويم";
-    btnIcs.onclick = () => downloadICS({
-      meal: r.meal,
-      startsAtISO: r.starts_at,
-      endsAtISO: r.ends_at,
-      hostsText: hosts,
-      notes: r.notes
-    });
+    btnIcs.onclick = () => {
+      downloadICS({
+        meal: r.meal,
+        startsAtISO: r.starts_at,
+        endsAtISO: r.ends_at,
+        hostsText: hosts,
+        notes: r.notes
+      });
+    };
 
     const btnWa = document.createElement("button");
     btnWa.className = "btn";
@@ -272,15 +239,16 @@ setMessage("", ""); // نخليه فاضي لأننا بنعرض Skeleton أثن
     btnWa.textContent = "📤 مشاركة واتساب";
     btnWa.onclick = () => {
       const msg = [
-        `🍽️ ${mealLabel(r.meal)}`,
-        `📅 ${g}`,
-        `🕌 ${h}`,
-        `⏰ ${t}`,
-        `📍 ${DEFAULT_LOCATION}`,
-        `👥 الداعين: ${hosts}`,
+        "🍽️ " + mealLabel(r.meal),
+        "📅 " + g,
+        "🕌 " + h,
+        "⏰ " + t,
+        "📍 " + DEFAULT_LOCATION,
+        "👥 الداعين: " + hosts
       ];
-      if (r.notes) msg.push(`📝 ${r.notes}`);
-      msg.push("", location.href);
+      if (r.notes) msg.push("📝 " + r.notes);
+      msg.push("");
+      msg.push(location.href);
       openWhatsAppShare(msg.join("\n"));
     };
 
@@ -335,7 +303,7 @@ setMessage("", ""); // نخليه فاضي لأننا بنعرض Skeleton أثن
     if (!currentRows.length){
       wrap.innerHTML = '<div class="notice">لا توجد مناسبات قادمة ضمن هذا الفلتر.</div>';
     } else {
-      currentRows.forEach(r => wrap.appendChild(buildCard(r, { variant:"normal" })));
+      currentRows.forEach(r => wrap.appendChild(buildCard(r, { variant: "normal" })));
     }
 
     $("list").innerHTML = "";
@@ -360,7 +328,7 @@ setMessage("", ""); // نخليه فاضي لأننا بنعرض Skeleton أثن
 
       const grid = document.createElement("div");
       grid.className = "cardsGrid";
-      pastRowsAll.forEach(r => grid.appendChild(buildCard(r, { variant:"past" })));
+      pastRowsAll.forEach(r => grid.appendChild(buildCard(r, { variant: "past" })));
 
       inner.appendChild(grid);
       details.appendChild(summary);
@@ -373,16 +341,14 @@ setMessage("", ""); // نخليه فاضي لأننا بنعرض Skeleton أثن
     $("monthPick").value = m;
     $("monthBadge").textContent = monthLabel(m);
 
-    // ✅ Skeleton loading (احترافي)
-    $("msg").style.display = "none";
-    renderSkeleton($("list"), 6);
+    setMessage("", " "); // keep space (better UX)
+    $("list").innerHTML = skeletonMealsHTML(3);
     $("pastWrap").innerHTML = "";
-    $("nextBox").style.display = "none";
 
-    const start = `${m}-01T00:00:00+03:00`;
+    const start = m + "-01T00:00:00+03:00";
     const [yy, mm] = m.split("-").map(Number);
     const endDate = new Date(Date.UTC(yy, mm, 1));
-    const end = `${endDate.getUTCFullYear()}-${pad2(endDate.getUTCMonth()+1)}-${pad2(endDate.getUTCDate())}T00:00:00+03:00`;
+    const end = endDate.getUTCFullYear() + "-" + pad2(endDate.getUTCMonth()+1) + "-" + pad2(endDate.getUTCDate()) + "T00:00:00+03:00";
 
     const resMeals = await sb
       .from("meals")
@@ -397,21 +363,21 @@ setMessage("", ""); // نخليه فاضي لأننا بنعرض Skeleton أثن
       .lt("starts_at", end)
       .order("starts_at", { ascending:true });
 
-    $("msg").style.display = "";
-
     if (resMeals.error){
-      setMessage("warn", "تعذر تحميل الجدول: " + resMeals.error.message);
-      $("list").innerHTML = "";
+      setMessage("warn", "تعذر تحميل البيانات: " + resMeals.error.message);
+      $("nextBox").style.display = "none";
       cachedRows = [];
       nextMeal = null;
       if (countdownTimer) clearInterval(countdownTimer);
+      $("list").innerHTML = "";
       return;
     }
 
     const rows = resMeals.data || [];
     if (!rows.length){
-      setMessage("", "لا توجد مناسبات لهذا الشهر حتى الآن.");
-      $("list").innerHTML = '<div class="notice">📭 لا توجد بيانات.</div>';
+      setMessage("", "لا توجد بيانات لهذا الشهر حتى الآن.");
+      $("list").innerHTML = '<div class="notice">لا توجد مناسبات.</div>';
+      $("nextBox").style.display = "none";
       cachedRows = [];
       nextMeal = null;
       if (countdownTimer) clearInterval(countdownTimer);
@@ -419,13 +385,14 @@ setMessage("", ""); // نخليه فاضي لأننا بنعرض Skeleton أثن
     }
 
     rows.forEach(r => {
-      r._hostNames = (r.meal_hosts || [])
+      const hosts = (r.meal_hosts || [])
         .map(h => h.members?.full_name)
         .filter(Boolean);
+      r._hostNames = hosts;
     });
 
     cachedRows = rows;
-    setMessage("ok", "تم تحميل الجدول ✓");
+    setMessage("ok", "تم تحميل الجدول.");
 
     nextMeal = pickNextUpcoming(rows);
     showNextBanner(nextMeal);
@@ -434,7 +401,6 @@ setMessage("", ""); // نخليه فاضي لأننا بنعرض Skeleton أثن
     renderAll();
   }
 
-  // init
   const initialMonth = getMonthParam();
   $("monthPick").value = initialMonth;
   $("monthBadge").textContent = monthLabel(initialMonth);
