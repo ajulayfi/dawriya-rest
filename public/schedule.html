@@ -111,15 +111,9 @@
   $("pageTitle").textContent = APP_TITLE;
   $("loc").textContent = DEFAULT_LOCATION;
 
-  // حماية بسيطة بالرابط
-  const access = getAccessParam();
-  if (!validateAccessToken(access)){
-    $("msg").className = "notice warn";
-    $("msg").textContent = "الرابط غير صالح أو انتهت صلاحيته. تواصل مع مدير النظام للحصول على رابط صحيح.";
-    $("list").innerHTML = "";
-    throw new Error("Invalid access token");
-  }
-
+  // ✅ Public schedule (no token)
+setMessage("", ""); // نخليه فاضي لأننا بنعرض Skeleton أثناء التحميل
+  
   let activeFilter = "all";
   let cachedRows = [];
   let nextMeal = null;
