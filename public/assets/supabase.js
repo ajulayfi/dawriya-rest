@@ -1,15 +1,15 @@
 
-// 🔐 بيانات Supabase (من Project Settings → API)
-const SUPABASE_URL = "https://gspubqodpuxdlvwlmhvo.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzcHVicW9kcHV4ZGx2d2xtaHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4MzgxNDYsImV4cCI6MjA4NzQxNDE0Nn0.iuc_7G14hHurPAZOQ9eR2O8iBmTOqlOM1z23oBZqyI4";
+// اتصال Supabase
 
-// ===============================
-// Dawriya Rest - Configuration
-// ===============================// إنشاء العميل
+const SUPABASE_URL = "https://gspubqodpuxdlvwlmhvo.supabase.co";
+
+// ⚠️ حط مفتاحك هنا (anon public key)
+
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzcHVicW9kcHV4ZGx2d2xtaHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4MzgxNDYsImV4cCI6MjA4NzQxNDE0Nn0.iuc_7G14hHurPAZOQ9eR2O8iBmTOqlOM1z23oBZqyI4";
 
 const supabaseClient = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_ANON_KEY
 );
 
-console.log("SUPABASE JS LOADED", SUPABASE_URL);
+console.log("Supabase connected");
