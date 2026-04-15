@@ -1,162 +1,72 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>تسجيل دخول الإدارة — دورية الاستراحة</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>تسجيل الدخول | دورية الاستراحة</title>
 
-  <link rel="stylesheet" href="./assets/app.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="./assets/app.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <style>
-    .loginWrap{max-width:480px;margin:40px auto 0}
-    .loginTitle h1{margin:0;font-size:22px}
-    .loginTitle .sub{margin-top:4px}
-    .metaLine{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    .metaPill{
-      display:inline-flex;align-items:center;gap:6px;
-      padding:5px 12px;border-radius:999px;
-      border:1.5px solid var(--line);background:rgba(255,255,255,.8);
-      color:var(--muted);font-size:12px;font-weight:700;
-    }
-    .pwRow{position:relative}
-    .pwToggle{
-      position:absolute;inset-inline-start:12px;top:50%;
-      transform:translateY(-50%);
-      border:1px solid var(--line);background:#fff;border-radius:999px;
-      padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;
-      font-family:inherit;transition:background .15s;
-    }
-    .pwToggle:hover{background:#f8fafc}
-    .pwRow .input{padding-inline-start:92px}
-    .footerNote{margin-top:14px;color:var(--muted);font-size:12px;line-height:1.7}
-    .action-row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:14px}
-    .back-link{font-size:13px;color:var(--muted);font-weight:600;text-decoration:underline;cursor:pointer}
-    .back-link:hover{color:var(--text)}
-  </style>
 </head>
-
-<body>
-<div class="container">
-  <div class="header">
-    <div class="title loginTitle">
-      <h1>تسجيل دخول الإدارة</h1>
-      <div class="sub">استخدم بريد الأدمن وكلمة المرور</div>
-      <div class="metaLine">
-        <span class="metaPill">🔒 دخول محمي</span>
-        <span class="metaPill">⚡ Supabase Auth</span>
+<body class="authPage">
+  <main class="authWrap">
+    <section class="authCard">
+      <div class="authHead">
+        <div class="authBadge">🔐</div>
+        <h1>تسجيل الدخول</h1>
+        <p>لوحة إدارة دورية الاستراحة</p>
       </div>
-    </div>
-  </div>
 
-  <div class="card loginWrap">
-    <div style="font-weight:900;font-size:15px;margin-bottom:4px">بيانات الدخول</div>
-    <div class="small" style="margin-bottom:14px">هذه الصفحة مخصصة للإدارة فقط — لعرض الجدول العام <a href="./schedule.html" style="color:var(--accent);font-weight:700">اضغط هنا</a>.</div>
+      <form id="loginForm" class="authForm" novalidate>
+        <div class="field">
+          <label for="email">البريد الإلكتروني</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            inputmode="email"
+            autocomplete="email"
+            placeholder="name@example.com"
+            required
+          />
+        </div>
 
-    <div class="hr"></div>
+        <div class="field">
+          <label for="password">كلمة المرور</label>
+          <div class="passwordWrap">
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              placeholder="••••••••"
+              required
+              minlength="6"
+            />
+            <button type="button" class="togglePassword" id="togglePassword" aria-label="إظهار أو إخفاء كلمة المرور">
+              إظهار
+            </button>
+          </div>
+        </div>
 
-    <label for="email">البريد الإلكتروني</label>
-    <input id="email" class="input" type="email" placeholder="name@example.com"
-           autocomplete="email" inputmode="email"/>
+        <button id="loginBtn" class="btn primary full" type="submit">
+          دخول
+        </button>
 
-    <label for="password" style="margin-top:12px">كلمة المرور</label>
-    <div class="pwRow">
-      <button id="togglePw" class="pwToggle" type="button">👁️ إظهار</button>
-      <input id="password" class="input" type="password" placeholder="••••••••"
-             autocomplete="current-password"/>
-    </div>
+        <p id="formMessage" class="formMessage" aria-live="polite"></p>
+      </form>
 
-    <div class="action-row">
-      <button id="login" class="btn">تسجيل دخول</button>
-      <button id="clear" class="btn secondary" type="button">مسح</button>
-      <a href="./schedule.html" class="back-link">← رجوع للجدول</a>
-    </div>
+      <div class="authFoot">
+        <a href="./schedule" class="textLink">العودة إلى الجدول</a>
+      </div>
+    </section>
+  </main>
 
-    <div class="hr"></div>
-
-    <div id="msg" class="notice">اكتب بريد الأدمن وكلمة المرور ثم سجّل الدخول.</div>
-
-    <div class="footerNote">
-      إذا ظهرت رسالة (غير مصرح)، فهذا يعني أن بريدك غير مضاف في قائمة الأدمن بـ Supabase.
-    </div>
-  </div>
-</div>
-
-<script type="module">
-  import { SUPABASE_URL, SUPABASE_ANON_KEY, APP_TITLE } from "./assets/config.js";
-
-  document.title = `تسجيل دخول الإدارة • ${APP_TITLE}`;
-
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-  const emailEl = document.getElementById("email");
-  const passEl  = document.getElementById("password");
-  const msgEl   = document.getElementById("msg");
-  const loginBtn = document.getElementById("login");
-  const clearBtn = document.getElementById("clear");
-  const togglePw = document.getElementById("togglePw");
-
-  function setMsg(kind, text){
-    msgEl.className = kind ? ("notice " + kind) : "notice";
-    msgEl.textContent = text;
-  }
-
-  function setBusy(isBusy){
-    [loginBtn, clearBtn, emailEl, passEl, togglePw].forEach(el => el.disabled = isBusy);
-    loginBtn.textContent = isBusy ? "جارٍ الدخول…" : "تسجيل دخول";
-  }
-
-  function clearForm(){
-    emailEl.value = "";
-    passEl.value = "";
-    emailEl.focus();
-    setMsg("", "تم المسح. اكتب بيانات الدخول.");
-  }
-
-  async function doLogin(){
-    const email = (emailEl.value || "").trim();
-    const password = passEl.value || "";
-    if (!email || !password){ setMsg("warn","اكتب البريد وكلمة المرور."); return; }
-
-    setBusy(true);
-    setMsg("", "جارٍ التحقق…");
-
-    try{
-      const { error } = await sb.auth.signInWithPassword({ email, password });
-      if (error){
-        const msgs = {
-          "Invalid login credentials": "البريد أو كلمة المرور غير صحيحة.",
-          "Email not confirmed": "يرجى تأكيد بريدك الإلكتروني أولاً.",
-        };
-        setMsg("warn", msgs[error.message] || error.message);
-        setBusy(false);
-        return;
-      }
-      setMsg("ok","تم تسجيل الدخول ✅ جارٍ التحويل…");
-      window.location.href = "./admin.html";
-    }catch(e){
-      setMsg("warn","حدث خطأ غير متوقع. حاول مرة أخرى.");
-      setBusy(false);
-    }
-  }
-
-  togglePw.addEventListener("click", () => {
-    const isPw = passEl.type === "password";
-    passEl.type = isPw ? "text" : "password";
-    togglePw.textContent = isPw ? "🙈 إخفاء" : "👁️ إظهار";
-    passEl.focus();
-  });
-
-  loginBtn.addEventListener("click", doLogin);
-  clearBtn.addEventListener("click", clearForm);
-  passEl.addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
-  emailEl.addEventListener("keydown", e => { if (e.key === "Enter") passEl.focus(); });
-
-  // إذا كان مسجلاً بالفعل → روح للإدارة
-  (async () => {
-    const { data:{ user } } = await sb.auth.getUser();
-    if (user) window.location.href = "./admin.html";
-  })();
-</script>
+  <script src="./config/supabase.js"></script>
+  <script src="./assets/login.js"></script>
 </body>
 </html>
