@@ -21,18 +21,24 @@
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
+  async function isAllowedAdmin(email) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const { data, error } = await supabaseClient
+      .from("allowed_admin_emails")
+      .select("email")
+      .ilike("email", normalizedEmail)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error("تعذر التحقق من صلاحية الدخول: " + error.message);
+    }
+
+    return !!data;
+  }
+
   async function checkExistingSession() {
     try {
-      if (!window.supabase) {
-        console.error("Supabase library not loaded");
-        return;
-      }
-
-      if (typeof supabaseClient === "undefined") {
-        console.error("supabaseClient is not defined");
-        return;
-      }
-
       const { data, error } = await supabaseClient.auth.getSession();
 
       if (error) {
@@ -40,23 +46,12 @@
         return;
       }
 
-      const session = data?.session;
-      const currentEmail = session?.user?.email?.trim().toLowerCase();
-
+      const currentEmail = data?.session?.user?.email?.trim().toLowerCase();
       if (!currentEmail) return;
 
-      const { data: adminRow, error: adminError } = await supabaseClient
-        .from("allowed_admin_emails")
-        .select("email")
-        .eq("email", currentEmail)
-        .maybeSingle();
+      const allowed = await isAllowedAdmin(currentEmail);
 
-      if (adminError) {
-        console.error("Admin check error:", adminError);
-        return;
-      }
-
-      if (adminRow) {
+      if (allowed) {
         window.location.href = "./admin.html";
         return;
       }
@@ -85,8 +80,8 @@
           throw new Error("مكتبة Supabase لم يتم تحميلها.");
         }
 
-        if (typeof supabaseClient === "undefined") {
-          throw new Error("supabaseClient غير معرّف. تحقق من ملف assets/supabase.js");
+        if (!window.supabaseClient) {
+          throw new Error("supabaseClient غير معرّف. تحقق من assets/supabase.js");
         }
 
         const email = emailInput.value.trim().toLowerCase();
@@ -122,18 +117,9 @@
           return;
         }
 
-        const { data: adminRow, error: adminError } = await supabaseClient
-          .from("allowed_admin_emails")
-          .select("email")
-          .eq("email", userEmail)
-          .maybeSingle();
+        const allowed = await isAllowedAdmin(userEmail);
 
-        if (adminError) {
-          showMessage("تعذر التحقق من صلاحية الدخول: " + adminError.message, "error");
-          return;
-        }
-
-        if (!adminRow) {
+        if (!allowed) {
           await supabaseClient.auth.signOut();
           showMessage("هذا الحساب غير مصرح له بالدخول إلى لوحة الإدارة.", "error");
           return;
