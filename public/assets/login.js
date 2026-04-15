@@ -21,33 +21,6 @@
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
-  async function checkExistingSession() {
-    try {
-      const { data, error } = await supabaseClient.auth.getSession();
-      if (error) return;
-
-      const session = data?.session;
-      const email = session?.user?.email?.trim().toLowerCase();
-
-      if (!email) return;
-
-      const { data: adminRow, error: adminError } = await supabaseClient
-        .from("allowed_admin_emails")
-        .select("email")
-        .eq("email", email)
-        .maybeSingle();
-
-      if (!adminError && adminRow) {
-        window.location.href = "./admin.html";
-        return;
-      }
-
-      await supabaseClient.auth.signOut();
-    } catch (err) {
-      console.error("Session check failed:", err);
-    }
-  }
-
   if (togglePassword) {
     togglePassword.addEventListener("click", function () {
       const hidden = passwordInput.type === "password";
@@ -60,29 +33,37 @@
     e.preventDefault();
     showMessage("");
 
-    const email = emailInput.value.trim().toLowerCase();
-    const password = passwordInput.value;
-
-    if (!email || !password) {
-      showMessage("يرجى تعبئة البريد الإلكتروني وكلمة المرور.", "error");
-      return;
-    }
-
-    if (!isValidEmail(email)) {
-      showMessage("صيغة البريد الإلكتروني غير صحيحة.", "error");
-      return;
-    }
-
-    setLoading(true);
-
     try {
+      if (!window.supabase) {
+        throw new Error("مكتبة Supabase لم يتم تحميلها.");
+      }
+
+      if (typeof supabaseClient === "undefined") {
+        throw new Error("supabaseClient غير معرّف. تحقق من assets/supabase.js");
+      }
+
+      const email = emailInput.value.trim().toLowerCase();
+      const password = passwordInput.value;
+
+      if (!email || !password) {
+        showMessage("يرجى تعبئة البريد الإلكتروني وكلمة المرور.", "error");
+        return;
+      }
+
+      if (!isValidEmail(email)) {
+        showMessage("صيغة البريد الإلكتروني غير صحيحة.", "error");
+        return;
+      }
+
+      setLoading(true);
+
       const { data, error } = await supabaseClient.auth.signInWithPassword({
         email,
         password
       });
 
       if (error) {
-        showMessage("فشل تسجيل الدخول. تأكد من البريد وكلمة المرور.", "error");
+        showMessage("خطأ تسجيل الدخول: " + error.message, "error");
         return;
       }
 
@@ -90,7 +71,7 @@
 
       if (!userEmail) {
         await supabaseClient.auth.signOut();
-        showMessage("تعذر التحقق من الحساب.", "error");
+        showMessage("تم الدخول لكن تعذر قراءة البريد الإلكتروني.", "error");
         return;
       }
 
@@ -101,14 +82,13 @@
         .maybeSingle();
 
       if (adminError) {
-        await supabaseClient.auth.signOut();
-        showMessage("حدث خطأ أثناء التحقق من الصلاحية.", "error");
+        showMessage("خطأ التحقق من الصلاحية: " + adminError.message, "error");
         return;
       }
 
       if (!adminRow) {
         await supabaseClient.auth.signOut();
-        showMessage("هذا الحساب غير مصرح له بالدخول إلى لوحة الإدارة.", "error");
+        showMessage("هذا البريد غير موجود في allowed_admin_emails", "error");
         return;
       }
 
@@ -116,13 +96,12 @@
       setTimeout(() => {
         window.location.href = "./admin.html";
       }, 500);
+
     } catch (err) {
-      console.error("Login error:", err);
-      showMessage("حدث خطأ غير متوقع. حاول مرة أخرى.", "error");
+      console.error(err);
+      showMessage("الخطأ الحقيقي: " + (err.message || "Unknown error"), "error");
     } finally {
       setLoading(false);
     }
   });
-
-  checkExistingSession();
 })();
