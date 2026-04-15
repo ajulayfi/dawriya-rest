@@ -7,7 +7,10 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
 
   <link rel="stylesheet" href="./assets/app.css" />
 </head>
@@ -15,7 +18,9 @@
   <main class="login-layout">
     <section class="login-side">
       <div class="brand-chip">لوحة الإدارة</div>
+
       <h1 class="login-title">دورية الاستراحة</h1>
+
       <p class="login-subtitle">
         تسجيل الدخول للوصول إلى لوحة التحكم وإدارة الجدول الأسبوعي للأعضاء بشكل منظم وواضح.
       </p>
@@ -25,10 +30,12 @@
           <span class="feature-icon">✓</span>
           <span>إدارة الأسابيع والتوزيع بسهولة</span>
         </div>
+
         <div class="feature-item">
           <span class="feature-icon">✓</span>
           <span>واجهة مناسبة للجوال والكمبيوتر</span>
         </div>
+
         <div class="feature-item">
           <span class="feature-icon">✓</span>
           <span>صلاحيات دخول للأدمن فقط</span>
@@ -66,7 +73,14 @@
                 autocomplete="current-password"
                 required
               />
-              <button type="button" id="togglePassword" class="toggle-password">إظهار</button>
+              <button
+                type="button"
+                id="togglePassword"
+                class="toggle-password"
+                aria-label="إظهار أو إخفاء كلمة المرور"
+              >
+                إظهار
+              </button>
             </div>
           </div>
 
@@ -74,7 +88,7 @@
             دخول
           </button>
 
-          <p id="msg" class="status-message"></p>
+          <p id="msg" class="status-message" aria-live="polite"></p>
         </form>
 
         <div class="login-card-foot">
