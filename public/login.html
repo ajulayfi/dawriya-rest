@@ -1,72 +1,120 @@
-<!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>تسجيل الدخول | دورية الاستراحة</title>
+(function () {
+  const form = document.getElementById("loginForm");
+  const emailInput = document.getElementById("email");
+  const passwordInput = document.getElementById("password");
+  const loginBtn = document.getElementById("loginBtn");
+  const formMessage = document.getElementById("formMessage");
+  const togglePassword = document.getElementById("togglePassword");
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+  function setMessage(message, type = "") {
+    formMessage.textContent = message || "";
+    formMessage.className = "formMessage";
+    if (type) formMessage.classList.add(type);
+  }
 
-  <link rel="stylesheet" href="./assets/app.css" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
-<body class="authPage">
-  <main class="authWrap">
-    <section class="authCard">
-      <div class="authHead">
-        <div class="authBadge">🔐</div>
-        <h1>تسجيل الدخول</h1>
-        <p>لوحة إدارة دورية الاستراحة</p>
-      </div>
+  function setLoading(isLoading) {
+    loginBtn.disabled = isLoading;
+    loginBtn.textContent = isLoading ? "جارٍ تسجيل الدخول..." : "دخول";
+  }
 
-      <form id="loginForm" class="authForm" novalidate>
-        <div class="field">
-          <label for="email">البريد الإلكتروني</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            inputmode="email"
-            autocomplete="email"
-            placeholder="name@example.com"
-            required
-          />
-        </div>
+  function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
 
-        <div class="field">
-          <label for="password">كلمة المرور</label>
-          <div class="passwordWrap">
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autocomplete="current-password"
-              placeholder="••••••••"
-              required
-              minlength="6"
-            />
-            <button type="button" class="togglePassword" id="togglePassword" aria-label="إظهار أو إخفاء كلمة المرور">
-              إظهار
-            </button>
-          </div>
-        </div>
+  async function redirectIfAlreadyLoggedIn() {
+    const { data, error } = await supabaseClient.auth.getSession();
 
-        <button id="loginBtn" class="btn primary full" type="submit">
-          دخول
-        </button>
+    if (error) return;
 
-        <p id="formMessage" class="formMessage" aria-live="polite"></p>
-      </form>
+    const session = data?.session;
+    if (!session?.user?.email) return;
 
-      <div class="authFoot">
-        <a href="./schedule" class="textLink">العودة إلى الجدول</a>
-      </div>
-    </section>
-  </main>
+    const email = session.user.email.trim().toLowerCase();
 
-  <script src="./config/supabase.js"></script>
-  <script src="./assets/login.js"></script>
-</body>
-</html>
+    const { data: adminRow, error: adminError } = await supabaseClient
+      .from("allowed_admin_emails")
+      .select("email")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (!adminError && adminRow) {
+      window.location.href = "./admin";
+      return;
+    }
+
+    await supabaseClient.auth.signOut();
+  }
+
+  togglePassword.addEventListener("click", function () {
+    const isPassword = passwordInput.type === "password";
+    passwordInput.type = isPassword ? "text" : "password";
+    togglePassword.textContent = isPassword ? "إخفاء" : "إظهار";
+  });
+
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    setMessage("");
+
+    const email = emailInput.value.trim().toLowerCase();
+    const password = passwordInput.value;
+
+    if (!email || !password) {
+      setMessage("يرجى تعبئة البريد الإلكتروني وكلمة المرور.", "error");
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      setMessage("صيغة البريد الإلكتروني غير صحيحة.", "error");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setMessage("فشل تسجيل الدخول. تأكد من البريد وكلمة المرور.", "error");
+        return;
+      }
+
+      const userEmail = data?.user?.email?.trim().toLowerCase();
+      if (!userEmail) {
+        await supabaseClient.auth.signOut();
+        setMessage("تعذر التحقق من البريد الإلكتروني.", "error");
+        return;
+      }
+
+      const { data: adminRow, error: adminError } = await supabaseClient
+        .from("allowed_admin_emails")
+        .select("email")
+        .eq("email", userEmail)
+        .maybeSingle();
+
+      if (adminError) {
+        await supabaseClient.auth.signOut();
+        setMessage("حدث خطأ أثناء التحقق من صلاحية الدخول.", "error");
+        return;
+      }
+
+      if (!adminRow) {
+        await supabaseClient.auth.signOut();
+        setMessage("هذا الحساب غير مصرح له بالدخول إلى لوحة الإدارة.", "error");
+        return;
+      }
+
+      setMessage("تم تسجيل الدخول بنجاح، جارٍ التحويل...", "success");
+      window.location.href = "./admin";
+    } catch (err) {
+      console.error(err);
+      setMessage("حدث خطأ غير متوقع. حاول مرة أخرى.", "error");
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  redirectIfAlreadyLoggedIn();
+})();
