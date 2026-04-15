@@ -1,120 +1,45 @@
-(function () {
-  const form = document.getElementById("loginForm");
-  const emailInput = document.getElementById("email");
-  const passwordInput = document.getElementById("password");
-  const loginBtn = document.getElementById("loginBtn");
-  const formMessage = document.getElementById("formMessage");
-  const togglePassword = document.getElementById("togglePassword");
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>تسجيل الدخول</title>
 
-  function setMessage(message, type = "") {
-    formMessage.textContent = message || "";
-    formMessage.className = "formMessage";
-    if (type) formMessage.classList.add(type);
-  }
+  <link rel="stylesheet" href="./assets/app.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
 
-  function setLoading(isLoading) {
-    loginBtn.disabled = isLoading;
-    loginBtn.textContent = isLoading ? "جارٍ تسجيل الدخول..." : "دخول";
-  }
+<body class="authPage">
 
-  function isValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  }
+  <div class="authBox">
+    <h1>تسجيل الدخول</h1>
 
-  async function redirectIfAlreadyLoggedIn() {
-    const { data, error } = await supabaseClient.auth.getSession();
+    <form id="loginForm">
 
-    if (error) return;
+      <input
+        id="email"
+        type="email"
+        placeholder="البريد الإلكتروني"
+        required
+      />
 
-    const session = data?.session;
-    if (!session?.user?.email) return;
+      <input
+        id="password"
+        type="password"
+        placeholder="كلمة المرور"
+        required
+      />
 
-    const email = session.user.email.trim().toLowerCase();
+      <button type="submit" id="loginBtn">دخول</button>
 
-    const { data: adminRow, error: adminError } = await supabaseClient
-      .from("allowed_admin_emails")
-      .select("email")
-      .eq("email", email)
-      .maybeSingle();
+      <p id="msg"></p>
 
-    if (!adminError && adminRow) {
-      window.location.href = "./admin";
-      return;
-    }
+    </form>
 
-    await supabaseClient.auth.signOut();
-  }
+    <a href="./schedule.html">العودة للجدول</a>
+  </div>
 
-  togglePassword.addEventListener("click", function () {
-    const isPassword = passwordInput.type === "password";
-    passwordInput.type = isPassword ? "text" : "password";
-    togglePassword.textContent = isPassword ? "إخفاء" : "إظهار";
-  });
-
-  form.addEventListener("submit", async function (e) {
-    e.preventDefault();
-    setMessage("");
-
-    const email = emailInput.value.trim().toLowerCase();
-    const password = passwordInput.value;
-
-    if (!email || !password) {
-      setMessage("يرجى تعبئة البريد الإلكتروني وكلمة المرور.", "error");
-      return;
-    }
-
-    if (!isValidEmail(email)) {
-      setMessage("صيغة البريد الإلكتروني غير صحيحة.", "error");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const { data, error } = await supabaseClient.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        setMessage("فشل تسجيل الدخول. تأكد من البريد وكلمة المرور.", "error");
-        return;
-      }
-
-      const userEmail = data?.user?.email?.trim().toLowerCase();
-      if (!userEmail) {
-        await supabaseClient.auth.signOut();
-        setMessage("تعذر التحقق من البريد الإلكتروني.", "error");
-        return;
-      }
-
-      const { data: adminRow, error: adminError } = await supabaseClient
-        .from("allowed_admin_emails")
-        .select("email")
-        .eq("email", userEmail)
-        .maybeSingle();
-
-      if (adminError) {
-        await supabaseClient.auth.signOut();
-        setMessage("حدث خطأ أثناء التحقق من صلاحية الدخول.", "error");
-        return;
-      }
-
-      if (!adminRow) {
-        await supabaseClient.auth.signOut();
-        setMessage("هذا الحساب غير مصرح له بالدخول إلى لوحة الإدارة.", "error");
-        return;
-      }
-
-      setMessage("تم تسجيل الدخول بنجاح، جارٍ التحويل...", "success");
-      window.location.href = "./admin";
-    } catch (err) {
-      console.error(err);
-      setMessage("حدث خطأ غير متوقع. حاول مرة أخرى.", "error");
-    } finally {
-      setLoading(false);
-    }
-  });
-
-  redirectIfAlreadyLoggedIn();
-})();
+  <script src="./assets/config.js"></script>
+  <script src="./assets/login.js"></script>
+</body>
+</html>
